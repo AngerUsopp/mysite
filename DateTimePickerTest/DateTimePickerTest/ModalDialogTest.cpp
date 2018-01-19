@@ -11,7 +11,7 @@
 #include <tuple>
 #include <algorithm>
 
-#include "curl/curl.h"
+#include "libcurl/include/curl/curl.h"
 
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
