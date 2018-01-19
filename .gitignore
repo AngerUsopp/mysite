@@ -1,0 +1,9 @@
+*.pdb
+DateTimePickerTest/Debug/DateTimePickerTest.exe
+*.tlog
+*.sdf
+*.obj
+*.ipch
+*.suo
+*.aps
+DateTimePickerTest/DateTimePickerTest/Debug/DateTimePickerTest.log
