@@ -115,6 +115,7 @@ void url_post(const std::string &json)
     {
         //curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/test.php?p0=参数一&p1=参数二");
         curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/test.php?p0=pa1&p1=pa2");
+
         std::string recv_data;
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &OnCurlDataRetrivedCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&recv_data);
@@ -136,9 +137,9 @@ void url_post(const std::string &json)
         //curl_easy_setopt(curl, CURLOPT_READDATA, (void*)&send_data);
 
         // WRITE JSON
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json.c_str());
         std::string headerType = std::string("Content-Type: application/json; charset=UTF-8");
         headerList = curl_slist_append(headerList, headerType.c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json.c_str());
 
         if (headerList)
         {
@@ -167,57 +168,49 @@ void url_post(const std::string &json)
     //curl_global_cleanup();
 }
 
-#ifdef DEF_ON
-void json_read()
+void curl_post_blob()
 {
-    // ---------------------------- read json --------------------
-    // parse json from string.
-    rapidjson::Document;
-    using rapidjson::Document;
-    Document doc;
-    doc.Parse<0>(stringFromStream.c_str());
-    if (doc.HasParseError()) {
-        rapidjson::ParseErrorCode code = doc.GetParseError();
-        psln(code);
-        return;
+    CURL *curl;
+    CURLcode res;
+    struct curl_slist *http_header = NULL;
+
+    curl = curl_easy_init();
+
+    curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/post.php?p0=pa1&p1=pa2");
+
+    std::string recv_data;
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &OnCurlDataRetrivedCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&recv_data);
+
+    struct curl_httppost *formpost = 0;
+    struct curl_httppost *lastptr = 0;
+    //curl_formadd(&formpost, &lastptr, CURLFORM_PTRNAME, "reqformat", CURLFORM_PTRCONTENTS, "plain", CURLFORM_END);
+    curl_formadd(&formpost, &lastptr, CURLFORM_PTRNAME, "file", CURLFORM_FILE, "D:\\Pictures\\small.png", CURLFORM_END);
+    curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+
+    res = curl_easy_perform(curl);
+    /*if (formpost)
+    {
+        curl_formfree(formpost);
+    }
+    if (lastptr)
+    {
+        curl_formfree(lastptr);
+    }*/
+
+    if (CURLE_OK == res)
+    {
+        char *ct;
+        /* ask for the content-type */
+        res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
+
+        if ((CURLE_OK == res) && ct)
+            printf("We received Content-Type: %s\n", ct);
     }
 
-    // use values in parse result.
-    using rapidjson::Value;
-    Value & v = doc["dictVersion"];
-    if (v.IsInt()) {
-        psln(v.GetInt());
-    }
-
-    Value & contents = doc["content"];
-    if (contents.IsArray()) {
-        for (size_t i = 0; i < contents.Size(); ++i) {
-            Value & v = contents[i];
-            assert(v.IsObject());
-            if (v.HasMember("key") && v["key"].IsString()) {
-                psln(v["key"].GetString());
-            }
-            if (v.HasMember("value") && v["value"].IsString()) {
-                psln(v["value"].GetString());
-            }
-        }
-    }
-    // ---------------------------- write json --------------------
-    pcln("add a value into array");
-
-    Value item(Type::kObjectType);
-    item.AddMember("key", "word5", doc.GetAllocator());
-    item.AddMember("value", "单词5", doc.GetAllocator());
-    contents.PushBack(item, doc.GetAllocator());
-
-    // convert dom to string.
-    StringBuffer buffer;      // in rapidjson/stringbuffer.h
-    Writer<StringBuffer> writer(buffer); // in rapidjson/writer.h
-    doc.Accept(writer);
-
-    psln(buffer.GetString());
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
 }
-#endif
 
 using namespace rapidjson;
 using namespace std;
@@ -311,13 +304,14 @@ void CModalDialogTest::OnBnClickedButton1()
 
     // POST
     //url_post();
+    curl_post_blob();
 
     // JSON_PARSE
     //json_parse();
 
     // JSON_WRITE
-    std::string json = json_write();
-    url_post(json);
+    //std::string json = json_write();
+    //url_post(json);
 }
 
 int CModalDialogTest::inc_id_ = 0;
