@@ -42,6 +42,22 @@ BEGIN_MESSAGE_MAP(CModalDialogTest, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON1, &CModalDialogTest::OnBnClickedButton1)
 END_MESSAGE_MAP()
 
+void save_data_to_file_and_open(const std::string &data)
+{
+    TCHAR szFilePath[MAX_PATH + 1] = { 0 };
+    GetModuleFileName(NULL, szFilePath, MAX_PATH);
+    (_tcsrchr(szFilePath, _T('\\')))[1] = 0;//删除文件名，只获得路径
+    CString str_url = szFilePath;
+
+    CFile html;
+    if (html.Open(str_url + L"post.html", CFile::modeCreate | CFile::modeWrite))
+    {
+        CString str = html.GetFilePath();
+        html.Write(data.data(), data.length());
+        html.Close();
+        ::ShellExecute(NULL, L"open", str, NULL, NULL, SW_SHOWNORMAL);
+    }
+}
 
 int OnCurlDataRetrivedCallback(void* data,
     int size,
@@ -170,6 +186,22 @@ void url_post(const std::string &json)
 
 void curl_post_blob()
 {
+    char *buffer = NULL;
+    long len;
+    CFile file;
+    if (file.Open(L"D:\\Pictures\\small.png", CFile::modeRead))
+    {
+        len = file.GetLength();
+        buffer = new char[len];
+        file.Read(buffer, file.GetLength());
+        file.Close();
+    }
+    if (!buffer)
+    {
+        ASSERT(false);
+        return;
+    }
+
     CURL *curl;
     CURLcode res;
     struct curl_slist *http_header = NULL;
@@ -184,19 +216,51 @@ void curl_post_blob()
 
     struct curl_httppost *formpost = 0;
     struct curl_httppost *lastptr = 0;
-    //curl_formadd(&formpost, &lastptr, CURLFORM_PTRNAME, "reqformat", CURLFORM_PTRCONTENTS, "plain", CURLFORM_END);
-    curl_formadd(&formpost, &lastptr, CURLFORM_PTRNAME, "file", CURLFORM_FILE, "D:\\Pictures\\small.png", CURLFORM_END);
+
+    /*curl_formadd(&formpost, &lastptr, 
+        CURLFORM_PTRNAME, "reqformat",
+        CURLFORM_CONTENTTYPE, "xxx/xxx",
+        CURLFORM_PTRCONTENTS, "xml/json", 
+        CURLFORM_END);*/
+    
+     curl_formadd(&formpost, &lastptr, 
+         CURLFORM_PTRNAME, "file", 
+         CURLFORM_FILE, "D:\\Pictures\\small.png", 
+         CURLFORM_CONTENTTYPE, "image/png",
+         CURLFORM_END);
+
+    /*curl_formadd(&formpost, &lastptr,
+        CURLFORM_COPYNAME, "uploadfile",
+        CURLFORM_FILE, "D:\\Pictures\\small.png",
+        CURLFORM_CONTENTTYPE, "image/jpeg",
+        CURLFORM_END);
+    curl_formadd(&formpost, &lastptr,
+        CURLFORM_COPYNAME, "filename",
+        CURLFORM_COPYCONTENTS, "test.jpg",
+        CURLFORM_END);*/
+
+    /*curl_formadd(&formpost, &lastptr,
+        CURLFORM_COPYNAME, "file",
+        CURLFORM_BUFFER, "buffer.png",
+        CURLFORM_BUFFERPTR, buffer,
+        CURLFORM_BUFFERLENGTH, len,
+        CURLFORM_CONTENTTYPE, "image/png",
+        CURLFORM_END);*/
+
     curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
 
     res = curl_easy_perform(curl);
-    /*if (formpost)
+
+    save_data_to_file_and_open(recv_data);
+    if (buffer)
+    {
+        delete buffer;
+    }
+
+    if (formpost)
     {
         curl_formfree(formpost);
     }
-    if (lastptr)
-    {
-        curl_formfree(lastptr);
-    }*/
 
     if (CURLE_OK == res)
     {
