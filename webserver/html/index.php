@@ -1,3 +1,7 @@
+<?php
+    setrawcookie("name", "testUser");
+?>
+
 <!DOCTYPE html>
 <html>
 <body>

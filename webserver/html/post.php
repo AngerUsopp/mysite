@@ -12,22 +12,24 @@
 		echo "php://input<br>";
 		echo $post_data . "<br>";
 
+        echo "_REQUEST<br>";
+        var_dump($_REQUEST);
+
+        echo "_GET<br>";
+        var_dump($_GET);
+
 		echo "_POST<br>";
 		var_dump($_POST);
 
 		echo "_FILES<br>";
 		var_dump($_FILES);
-
-		echo "_REQUEST<br>";
-		var_dump($_REQUEST);
 	}
 
     if($_FILES)
     {
-        var_dump($_FILES);
-
         if ((($_FILES["file"]["type"] == "image/gif") ||
                 ($_FILES["file"]["type"] == "image/jpeg") ||
+                ($_FILES["file"]["type"] == "image/pjpeg") ||
                 ($_FILES["file"]["type"] == "image/png")) &&
             ($_FILES["file"]["size"] < 200000))
         {
@@ -38,13 +40,13 @@
             else
             {
                 if (file_exists("upload/" . $_FILES["file"]["name"])) {
-                    echo $_FILES["file"]["name"] . " already exists. ";
+                    echo $_FILES["file"]["name"] . " already exists. <br>";
                 }
                 else
                 {
-                    //move_uploaded_file($_FILES["file"]["tmp_name"], "data/" . $_FILES["file"]["name"]);
-                    // echo "Stored in: " . "data/" . $_FILES["file"]["name"];
-                    echo "文件上传成功!";
+                    move_uploaded_file($_FILES["file"]["tmp_name"],
+                        "upload/" . $_FILES["file"]["name"]);
+                    echo "Stored in: " . "upload/" . $_FILES["file"]["name"] . "<br>" ;
                 }
             }
         }

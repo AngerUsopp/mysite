@@ -42,20 +42,41 @@ BEGIN_MESSAGE_MAP(CModalDialogTest, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON1, &CModalDialogTest::OnBnClickedButton1)
 END_MESSAGE_MAP()
 
-void save_data_to_file_and_open(const std::string &data)
+void save_data_to_file_and_open(const std::string &data, int type = 0)
 {
     TCHAR szFilePath[MAX_PATH + 1] = { 0 };
     GetModuleFileName(NULL, szFilePath, MAX_PATH);
     (_tcsrchr(szFilePath, _T('\\')))[1] = 0;//删除文件名，只获得路径
     CString str_url = szFilePath;
 
-    CFile html;
-    if (html.Open(str_url + L"post.html", CFile::modeCreate | CFile::modeWrite))
+    switch (type)
     {
-        CString str = html.GetFilePath();
-        html.Write(data.data(), data.length());
-        html.Close();
-        ::ShellExecute(NULL, L"open", str, NULL, NULL, SW_SHOWNORMAL);
+    case 0:
+    {
+        CFile html;
+        if (html.Open(str_url + L"post.html", CFile::modeCreate | CFile::modeWrite))
+        {
+            CString str = html.GetFilePath();
+            html.Write(data.data(), data.length());
+            html.Close();
+            ::ShellExecute(NULL, L"open", str, NULL, NULL, SW_SHOWNORMAL);
+        }
+    }
+    	break;
+    case 1:
+    {
+        CFile html;
+        if (html.Open(str_url + L"get.png", CFile::modeCreate | CFile::modeWrite))
+        {
+            CString str = html.GetFilePath();
+            html.Write(data.data(), data.length());
+            html.Close();
+            ::ShellExecute(NULL, L"open", str, NULL, NULL, SW_SHOWNORMAL);
+        }
+    }
+        break;
+    default:
+        break;
     }
 }
 
@@ -103,7 +124,38 @@ void url_get()
     }
 }
 
-int OnCUrlDataReadRequested(void* data,
+void curl_get_blob()
+{
+    CURL *curl;
+    CURLcode res;
+
+    curl = curl_easy_init();
+    if (curl)
+    {
+        std::string recv_data;
+        curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/upload/small.png");
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &OnCurlDataRetrivedCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&recv_data);
+        res = curl_easy_perform(curl);
+
+        if (CURLE_OK == res)
+        {
+            char *ct;
+            /* ask for the content-type */
+            res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
+
+            if ((CURLE_OK == res) && ct)
+                printf("We received Content-Type: %s\n", ct);
+
+            save_data_to_file_and_open(recv_data, 1);
+        }
+
+        /* always cleanup */
+        curl_easy_cleanup(curl);
+    }
+}
+
+int OnCurlDataSendCallback(void* data,
     int size,
     int cnt,
     void* userData)
@@ -223,29 +275,32 @@ void curl_post_blob()
         CURLFORM_PTRCONTENTS, "xml/json", 
         CURLFORM_END);*/
     
-     curl_formadd(&formpost, &lastptr, 
-         CURLFORM_PTRNAME, "file", 
-         CURLFORM_FILE, "D:\\Pictures\\small.png", 
-         CURLFORM_CONTENTTYPE, "image/png",
-         CURLFORM_END);
-
-    /*curl_formadd(&formpost, &lastptr,
-        CURLFORM_COPYNAME, "uploadfile",
-        CURLFORM_FILE, "D:\\Pictures\\small.png",
-        CURLFORM_CONTENTTYPE, "image/jpeg",
-        CURLFORM_END);
-    curl_formadd(&formpost, &lastptr,
-        CURLFORM_COPYNAME, "filename",
-        CURLFORM_COPYCONTENTS, "test.jpg",
-        CURLFORM_END);*/
-
-    /*curl_formadd(&formpost, &lastptr,
-        CURLFORM_COPYNAME, "file",
-        CURLFORM_BUFFER, "buffer.png",
-        CURLFORM_BUFFERPTR, buffer,
-        CURLFORM_BUFFERLENGTH, len,
+    // file 1
+    /*curl_formadd(&formpost, &lastptr, 
+        CURLFORM_PTRNAME, "file", 
+        CURLFORM_FILE, "D:\\Pictures\\small.png", 
         CURLFORM_CONTENTTYPE, "image/png",
         CURLFORM_END);*/
+
+    // file 2
+    curl_formadd(&formpost, &lastptr,
+    CURLFORM_COPYNAME, "file",
+    CURLFORM_FILE, "D:\\Pictures\\small.png",
+    CURLFORM_CONTENTTYPE, "image/jpeg",
+    CURLFORM_END);
+    curl_formadd(&formpost, &lastptr,
+    CURLFORM_COPYNAME, "filename",
+    CURLFORM_COPYCONTENTS, "test.jpg",
+    CURLFORM_END);
+
+    // buffer
+    /*curl_formadd(&formpost, &lastptr,
+    CURLFORM_COPYNAME, "file",
+    CURLFORM_BUFFER, "buffer.png",
+    CURLFORM_BUFFERPTR, buffer,
+    CURLFORM_BUFFERLENGTH, len,
+    CURLFORM_CONTENTTYPE, "image/png",
+    CURLFORM_END);*/
 
     curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
 
@@ -265,7 +320,6 @@ void curl_post_blob()
     if (CURLE_OK == res)
     {
         char *ct;
-        /* ask for the content-type */
         res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
 
         if ((CURLE_OK == res) && ct)
@@ -365,10 +419,11 @@ void CModalDialogTest::OnBnClickedButton1()
 {
     // GET
     //url_get();
+    curl_get_blob();
 
     // POST
     //url_post();
-    curl_post_blob();
+    //curl_post_blob();
 
     // JSON_PARSE
     //json_parse();
