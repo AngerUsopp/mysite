@@ -17,6 +17,7 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
 #include <iostream>
+#include <sys/stat.h>
 
 // CModalDialogTest 对话框
 
@@ -183,7 +184,7 @@ void url_post(const std::string &json)
     {
         //curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/test.php?p0=参数一&p1=参数二");
         curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:8080/test.php?p0=pa1&p1=pa2");
-
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0 (vc test project)");
         std::string recv_data;
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &OnCurlDataRetrivedCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&recv_data);
@@ -214,6 +215,31 @@ void url_post(const std::string &json)
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, (curl_slist*)headerList);
         }
 
+        TCHAR szFilePath[MAX_PATH + 1] = { 0 };
+        GetModuleFileName(NULL, szFilePath, MAX_PATH);
+        (_tcsrchr(szFilePath, _T('\\')))[1] = 0;//删除文件名，只获得路径
+        CStringA astr_Path(szFilePath);
+        astr_Path.Append("cookies.txt");
+
+        // 将服务端回发的cookie缓存到本地文件
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, astr_Path.GetString());  /* export */
+
+        // 设置方式一，导入本地缓存的cookie
+        struct _stat buf;
+        if(0 == _stat(astr_Path, &buf))
+        {
+            curl_easy_setopt(curl, CURLOPT_COOKIEFILE, astr_Path.GetString());  /* import */
+        }
+
+        // 设置方式二
+        //curl_easy_setopt(curl, CURLOPT_COOKIELIST, "Set-Cookie: c=client; Expires=xxx; Path=PATH;Domain=DOMAIN_NAME;SECURE=xxx;httponly=xxx");
+        //curl_easy_setopt(curl, CURLOPT_COOKIELIST, "Set-Cookie: s=server; Expires=xxx; Path=PATH;Domain=DOMAIN_NAME;SECURE=xxx;httponly=xxx");
+        curl_easy_setopt(curl, CURLOPT_COOKIELIST, "Set-Cookie: c=client;");
+        curl_easy_setopt(curl, CURLOPT_COOKIELIST, "Set-Cookie: s=server;");
+
+        // 设置方式三
+        curl_easy_setopt(curl, CURLOPT_COOKIE, "cookie0=COOKIE0;cookie1=COOKIE1;cookie2=COOKIE2");
+
         res = curl_easy_perform(curl);
         if (headerList)
         {
@@ -222,12 +248,31 @@ void url_post(const std::string &json)
 
         if (CURLE_OK == res)
         {
+            save_data_to_file_and_open(recv_data);
+
+            // 读取服务端回发的cookie，要想读取CURLINFO_COOKIELIST，必须在perform之前
+            // curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");，仅仅是为了开启cookie引擎，不需要有实际路径
+            struct curl_slist *cookies = NULL;
+            curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);       //获得cookie数据
+            int i = 1;
+            while (cookies)
+            {
+                // localhost	FALSE	/	FALSE	1517379170	params	details
+                TRACE("[%d]: %s\n", i, cookies->data);
+                cookies = cookies->next;
+                i++;
+            }
+
             char *ct;
             /* ask for the content-type */
             res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
 
             if ((CURLE_OK == res) && ct)
                 printf("We received Content-Type: %s\n", ct);
+        }
+        else
+        {
+            TRACE(curl_easy_strerror(res));
         }
 
         /* always cleanup */
@@ -414,12 +459,12 @@ std::string json_write()
 
     return std::string(buffer.GetString());
 }
-
+#include <random> 
 void CModalDialogTest::OnBnClickedButton1()
 {
     // GET
     //url_get();
-    curl_get_blob();
+    //curl_get_blob();
 
     // POST
     //url_post();
@@ -431,6 +476,19 @@ void CModalDialogTest::OnBnClickedButton1()
     // JSON_WRITE
     //std::string json = json_write();
     //url_post(json);
+
+    //std::vector<std::string> names = {
+    //    "1",
+    //    "2",
+    //    "3",
+    //    "4",
+    //    "5",
+    //};
+    //std::random_device rd;
+    //std::mt19937 g(rd());
+    //std::shuffle(names.begin(), names.end(), g);
+    //std::random_shuffle(names.begin(), names.end());
+    //std::copy(names.begin(), names.end(), std::ostream_iterator<std::string>(std::cout, ""));
 }
 
 int CModalDialogTest::inc_id_ = 0;

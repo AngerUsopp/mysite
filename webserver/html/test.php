@@ -1,5 +1,17 @@
 <?php
 
+    setrawcookie("name", "testUser");
+    $ary = array(
+        "user" => "wh",
+        "nick" => "bean",
+        "info" => array(
+            "mail" => "www@qq.com",
+            "phone" => "12131231231"
+            )
+        );
+    setrawcookie("params", "details", time() + 60);
+    var_dump($_COOKIE);
+
 	//require "index.php";
 
 	//echo "Hello World!";
