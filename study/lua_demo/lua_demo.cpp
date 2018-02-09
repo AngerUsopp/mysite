@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <iostream>
 #include <string>
+#include <conio.h>
+#include <winuser.rh>
 
 int lua_call_cpp_fn(lua_State *lua)
 {
@@ -60,12 +62,14 @@ bool test_lua()
         // lua中有调用到宿主函数的要先注册函数
         lua_register(lua, "lua_call_cpp_fn", lua_call_cpp_fn);
 
+        luaL_newlib; luaL_requiref; luaL_newmetatable; luaL_setfuncs;
+
         // 加载脚本
         //if (LUA_OK == luaL_loadfile(lua, "lua_script/test.lua"))
         // 执行脚本
         //lua_pcall(lua, 0, 0, 0);
 
-        int code = luaL_dofile(lua, "lua_script/test.lua");
+        int code = luaL_dofile(lua, "lua_script/test.lua"); 
         if (LUA_OK == code)// 加载并执行脚本
         {
             std::cout << "--------------cpp begin----------------" << std::endl;
@@ -118,7 +122,7 @@ bool test_lua()
         }
         else
         {
-            std::cout << code << std::endl;
+            std::cout << lua_tostring(lua, -1) << std::endl;
         }
 
         //关闭state
@@ -132,7 +136,7 @@ int _tmain(int argc, _TCHAR* argv[])
     do 
     {
         test_lua();
-    } while (/*getchar()*/getc(stdin) != 'c');
+    } while (/*getchar()*//*getc(stdin)*/_getche() != VK_ESCAPE);
 	return 0;
 }
 

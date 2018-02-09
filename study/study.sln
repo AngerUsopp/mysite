@@ -7,20 +7,48 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_demo", "lua_demo\lua_de
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DateTimePickerTest", "DateTimePickerTest\DateTimePickerTest.vcxproj", "{476FAF1E-D842-4FD0-803B-5A83646D0935}"
 EndProject
+Project("{5697748A-77EF-44CA-8824-4F5637E5945B}") = "lua_script", "lua_demo\lua_script.luaproj", "{E439935D-B2A2-46AE-856D-2AA408428F33}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|Mixed Platforms = Debug|Mixed Platforms
 		Debug|Win32 = Debug|Win32
+		Release|Any CPU = Release|Any CPU
+		Release|Mixed Platforms = Release|Mixed Platforms
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Debug|Win32.ActiveCfg = Debug|Win32
 		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Debug|Win32.Build.0 = Debug|Win32
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Release|Any CPU.ActiveCfg = Release|Win32
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Release|Win32.ActiveCfg = Release|Win32
 		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Release|Win32.Build.0 = Release|Win32
+		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Debug|Win32.ActiveCfg = Debug|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Debug|Win32.Build.0 = Debug|Win32
+		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Any CPU.ActiveCfg = Release|Win32
+		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Win32.ActiveCfg = Release|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Win32.Build.0 = Release|Win32
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Win32.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

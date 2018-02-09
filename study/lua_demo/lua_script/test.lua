@@ -16,3 +16,9 @@ local sssss = lua_call_cpp_fn(1, 2, 3)
 print("lua_call_cpp_fn sum is ", sssss)
 
 print("---------------lua end---------------")
+
+--asdasd
+--[[asd
+asdas
+asd
+asd]]
