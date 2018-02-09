@@ -62,7 +62,7 @@ bool test_lua()
         // lua中有调用到宿主函数的要先注册函数
         lua_register(lua, "lua_call_cpp_fn", lua_call_cpp_fn);
 
-        luaL_newlib; luaL_requiref; luaL_newmetatable; luaL_setfuncs;
+        //luaL_newlib; luaL_requiref; luaL_newmetatable; luaL_setfuncs;
 
         // 加载脚本
         //if (LUA_OK == luaL_loadfile(lua, "lua_script/test.lua"))
