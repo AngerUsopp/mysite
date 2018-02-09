@@ -16,8 +16,12 @@
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
+
 #include <iostream>
 #include <sys/stat.h>
+#include <random> 
+#include <io.h>
+#include <fcntl.h>
 
 // CModalDialogTest 对话框
 
@@ -42,6 +46,17 @@ void CModalDialogTest::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CModalDialogTest, CDialogEx)
     ON_BN_CLICKED(IDC_BUTTON1, &CModalDialogTest::OnBnClickedButton1)
 END_MESSAGE_MAP()
+
+void InitConsoleWindow()
+{
+    int nCrt = 0;
+    FILE* fp;
+    AllocConsole();
+    nCrt = _open_osfhandle((long)GetStdHandle(STD_OUTPUT_HANDLE), _O_TEXT);
+    fp = _fdopen(nCrt, "w");
+    *stdout = *fp;
+    setvbuf(stdout, NULL, _IONBF, 0);
+}
 
 void save_data_to_file_and_open(const std::string &data, int type = 0)
 {
@@ -459,7 +474,7 @@ std::string json_write()
 
     return std::string(buffer.GetString());
 }
-#include <random> 
+
 void CModalDialogTest::OnBnClickedButton1()
 {
     // GET
@@ -510,6 +525,14 @@ BOOL CModalDialogTest::OnInitDialog()
 
     // TODO:  在此添加额外的初始化
     SetWindowText((L"ModalTest " + std::to_wstring(id_)).c_str());
+
+    static bool bb = false;
+    if (!bb)
+    {
+        bb = true;
+
+        InitConsoleWindow();
+    }
 
     return TRUE;  // return TRUE unless you set the focus to a control
     // 异常:  OCX 属性页应返回 FALSE

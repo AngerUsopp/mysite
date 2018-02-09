@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_demo", "lua_demo\lua_demo.vcxproj", "{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DateTimePickerTest", "DateTimePickerTest\DateTimePickerTest.vcxproj", "{476FAF1E-D842-4FD0-803B-5A83646D0935}"
 EndProject
 Global
@@ -11,6 +13,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Debug|Win32.Build.0 = Debug|Win32
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Release|Win32.ActiveCfg = Release|Win32
+		{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}.Release|Win32.Build.0 = Release|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Debug|Win32.ActiveCfg = Debug|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Debug|Win32.Build.0 = Debug|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Win32.ActiveCfg = Release|Win32
