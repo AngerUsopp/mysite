@@ -1,9 +1,15 @@
+local lp = require "lua_proxy"
+
+print(os.date());
+print(lp.average(1,2,3,4, "asd"));
+print(lp.print_str("lua_proxy"));
 
 name = "study"
 date = 180208
 me = { name = "usopp", mail = "@qq.com"}
 
 function add (a,b)
+    print("lua add");
     return a+b
 end
 
@@ -16,9 +22,3 @@ local sssss = lua_call_cpp_fn(1, 2, 3)
 print("lua_call_cpp_fn sum is ", sssss)
 
 print("---------------lua end---------------")
-
---asdasd
---[[asd
-asdas
-asd
-asd]]

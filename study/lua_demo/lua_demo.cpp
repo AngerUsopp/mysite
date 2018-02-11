@@ -16,6 +16,7 @@
 int lua_call_cpp_fn(lua_State *lua)
 {
     lua_pushnumber(lua, 2233);
+    printf("lua_call_cpp_fn\n");
     return 1;
 }
 
@@ -69,52 +70,56 @@ bool test_lua()
         // 执行脚本
         //lua_pcall(lua, 0, 0, 0);
 
+        // 加载并执行脚本
         int code = luaL_dofile(lua, "lua_script/test.lua"); 
-        if (LUA_OK == code)// 加载并执行脚本
+        if (LUA_OK == code)
         {
             std::cout << "--------------cpp begin----------------" << std::endl;
 
-            //读取变量
-            lua_getglobal(lua, "name");   //string to be indexed
-            std::cout << "name = " << lua_tostring(lua, -1) << std::endl;
+            ////读取变量
+            //lua_getglobal(lua, "name");   //string to be indexed
+            //std::cout << "name = " << lua_tostring(lua, -1) << std::endl;
 
-            //读取数字
-            lua_getglobal(lua, "date"); //number to be indexed
-            std::cout << "date = " << lua_tonumber(lua, -1) << std::endl;
+            ////读取数字
+            //lua_getglobal(lua, "date"); //number to be indexed
+            //std::cout << "date = " << lua_tonumber(lua, -1) << std::endl;
 
-            //读取表
-            lua_getglobal(lua, "me");  //table to be indexed
-            if (!lua_istable(lua, -1))
-            {
-                std::cout << "error:it is not a table" << std::endl;
-            }
-            //取表中元素
-            lua_getfield(lua, -1, "name");
-            std::cout << "user name = " << lua_tostring(lua, -1) << std::endl;
-            lua_getfield(lua, -2, "mail");
-            std::cout << "user mail = " << lua_tostring(lua, -1) << std::endl;
+            ////读取表
+            //lua_getglobal(lua, "me");  //table to be indexed
+            //if (!lua_istable(lua, -1))
+            //{
+            //    std::cout << "error:it is not a table" << std::endl;
+            //}
+            ////取表中元素
+            //lua_getfield(lua, -1, "name");
+            //std::cout << "user name = " << lua_tostring(lua, -1) << std::endl;
+            //lua_getfield(lua, -2, "mail");
+            //std::cout << "user mail = " << lua_tostring(lua, -1) << std::endl;
 
-            //查看栈
-            stackDump(lua);
+            ////查看栈
+            //stackDump(lua);
 
-            //修改表中元素
-            lua_pushstring(lua, "wh");
-            lua_setfield(lua, -4, "name");
-            lua_getfield(lua, -3, "name");
-            std::cout << "user new name = " << lua_tostring(lua, -1) << std::endl;
+            ////修改表中元素
+            //lua_pushstring(lua, "wh");
+            //lua_setfield(lua, -4, "name");
+            //lua_getfield(lua, -3, "name");
+            //std::cout << "user new name = " << lua_tostring(lua, -1) << std::endl;
 
-            //查看栈
-            stackDump(lua);
+            ////查看栈
+            //stackDump(lua);
 
-            //取函数
+            ////取函数
             lua_getglobal(lua, "add");
             lua_pushnumber(lua, 15);
             lua_pushnumber(lua, 5);
             lua_pcall(lua, 2, 1, 0);//2-参数格式，1-返回值个数，调用函数，函数执行完，会将返回值压入栈中
-            std::cout << "add fn result = " << lua_tonumber(lua, -1) << std::endl;
 
-            //查看栈
-            stackDump(lua);
+            lua_getglobal(lua, "lua_call_cpp_fn");
+            lua_pcall(lua, 0, 1, 0);//2-参数格式，1-返回值个数，调用函数，函数执行完，会将返回值压入栈中
+            //std::cout << "add fn result = " << lua_tonumber(lua, -1) << std::endl;
+
+            ////查看栈
+            //stackDump(lua);
 
             std::cout << "--------------cpp end----------------" << std::endl;
 
