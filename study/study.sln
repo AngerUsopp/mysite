@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_demo", "lua_demo\lua_demo.vcxproj", "{48F9172B-2DC4-4CE8-A169-A1D16C7FB39D}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -9,8 +9,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_demo", "lua_demo\lua_de
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DateTimePickerTest", "DateTimePickerTest\DateTimePickerTest.vcxproj", "{476FAF1E-D842-4FD0-803B-5A83646D0935}"
-EndProject
-Project("{5697748A-77EF-44CA-8824-4F5637E5945B}") = "lua_script", "lua_demo\lua_script.luaproj", "{E439935D-B2A2-46AE-856D-2AA408428F33}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_proxy", "lua_proxy\lua_proxy.vcxproj", "{7B121C87-5E9C-43FC-9293-59C40B4F7E81}"
 EndProject
@@ -46,16 +44,6 @@ Global
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Win32.ActiveCfg = Release|Win32
 		{476FAF1E-D842-4FD0-803B-5A83646D0935}.Release|Win32.Build.0 = Release|Win32
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{E439935D-B2A2-46AE-856D-2AA408428F33}.Release|Win32.ActiveCfg = Release|Any CPU
 		{7B121C87-5E9C-43FC-9293-59C40B4F7E81}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{7B121C87-5E9C-43FC-9293-59C40B4F7E81}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{7B121C87-5E9C-43FC-9293-59C40B4F7E81}.Debug|Mixed Platforms.Build.0 = Debug|Win32
@@ -79,5 +67,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {793901E7-2162-4157-B3BA-4002885E6572}
 	EndGlobalSection
 EndGlobal

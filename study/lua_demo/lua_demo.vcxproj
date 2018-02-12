@@ -95,6 +95,9 @@ copy $(SolutionDir)..\lua\lua53.dll $(OutDir)lua53.dll;</Command>
     <ClCompile Include="lua_demo.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="lua_script\test.lua" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
