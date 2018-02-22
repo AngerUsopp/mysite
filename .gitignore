@@ -11,3 +11,4 @@ ipch/
 [Rr]elease/
 *.config
 *.luaproj
+*.db
