@@ -10,24 +10,28 @@ class CLuaProxy
 {
 public:
     CLuaProxy()
-        : m_count(100)
+        : m_count(g_inc++)
     {
-        printf("CLuaProxy construct \n");
+        printf("CLuaProxy construct %d \n", m_count);
     }
 
     ~CLuaProxy()
     {
-        printf("CLuaProxy distruct \n");
+        printf("CLuaProxy destruct %d \n", m_count);
     }
 
     void SayHello()
     {
-        printf("CLuaProxy SayHello \n");
+        printf("CLuaProxy SayHello %d \n", m_count);
     }
 
+    int ct() const { return m_count; }
+
 private:
+    static int g_inc;
     int m_count;
 };
+int CLuaProxy::g_inc = 0;
 
 
 void stackDump(lua_State* L)
@@ -72,6 +76,12 @@ void stackDump(lua_State* L)
 
 extern "C"
 {
+    int CLuaProxy_NotMenberFn(lua_State *lua)
+    {
+        printf("CLuaProxy_NotMenberFn \n");
+        return 0;
+    }
+
     int CLuaProxy_SayHello(lua_State *lua)
     {
         //得到第一个传入的对象参数（在stack最底部）
@@ -84,9 +94,9 @@ extern "C"
         //lua_settop(lua, 0);
 
         //将数据放入stack中，供Lua使用
-        lua_pushstring(lua, "proxy say sth");
+        //lua_pushstring(lua, "proxy say sth");
 
-        return 1;
+        return 0;
     }
 
     int CLuaProxy_gc(lua_State *lua)
@@ -100,10 +110,22 @@ extern "C"
         return 0;
     }
 
+    int CLuaProxy_tostring(lua_State *lua)
+    {
+        CLuaProxy** s = (CLuaProxy**)luaL_checkudata(lua, 1, "CLuaProxy");
+        luaL_argcheck(lua, s != NULL, 1, "invalid data");
+
+        lua_pushfstring(lua, "this is CLuaProxy info %d!", (*s)->ct());
+
+        return 1;
+    }
+
     luaL_Reg kProxyMemberFuncs[] =
     {
+        { "NotMenberFn", CLuaProxy_NotMenberFn },
         { "SayHello", CLuaProxy_SayHello },
         { "__gc", CLuaProxy_gc },
+        { "__tostring", CLuaProxy_tostring },
         { nullptr, nullptr }
     };
 
@@ -173,7 +195,9 @@ extern "C"
         //将成员函数注册到元表中（到这里，全局元表的设置就全部完成了）
         luaL_setfuncs(lua, kProxyMemberFuncs, 0);
 
+        // 注册该库的函数
         luaL_newlib(lua, cFuntions);
+
         return 1;
     }
 }
