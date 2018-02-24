@@ -4,34 +4,8 @@
 #include "stdafx.h"
 
 #include "lua.hpp"
+#include "LuaProxy.h"
 
-
-class CLuaProxy
-{
-public:
-    CLuaProxy()
-        : m_count(g_inc++)
-    {
-        printf("CLuaProxy construct %d \n", m_count);
-    }
-
-    ~CLuaProxy()
-    {
-        printf("CLuaProxy destruct %d \n", m_count);
-    }
-
-    void SayHello()
-    {
-        printf("CLuaProxy SayHello %d \n", m_count);
-    }
-
-    int ct() const { return m_count; }
-
-private:
-    static int g_inc;
-    int m_count;
-};
-int CLuaProxy::g_inc = 0;
 
 
 void stackDump(lua_State* L)
@@ -85,10 +59,10 @@ extern "C"
     int CLuaProxy_SayHello(lua_State *lua)
     {
         //得到第一个传入的对象参数（在stack最底部）
-        CLuaProxy** s = (CLuaProxy**)luaL_checkudata(lua, 1, "CLuaProxy");
-        luaL_argcheck(lua, s != NULL, 1, "invalid data");
+        ProxyWrapper **wrapper = (ProxyWrapper**)luaL_checkudata(lua, 1, "CLuaProxy");
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
         
-        (*s)->SayHello();
+        (*wrapper)->get()->SayHello();
 
         //清空stack
         //lua_settop(lua, 0);
@@ -102,20 +76,20 @@ extern "C"
     int CLuaProxy_gc(lua_State *lua)
     {
         //得到第一个传入的对象参数（在stack最底部）
-        CLuaProxy** s = (CLuaProxy**)luaL_checkudata(lua, 1, "CLuaProxy");
-        if (s)
+        ProxyWrapper **wrapper = (ProxyWrapper**)luaL_checkudata(lua, 1, "CLuaProxy");
+        if (wrapper)
         {
-            delete *s;
+            delete (*wrapper);
         }
         return 0;
     }
 
     int CLuaProxy_tostring(lua_State *lua)
     {
-        CLuaProxy** s = (CLuaProxy**)luaL_checkudata(lua, 1, "CLuaProxy");
-        luaL_argcheck(lua, s != NULL, 1, "invalid data");
+        ProxyWrapper **wrapper = (ProxyWrapper**)luaL_checkudata(lua, 1, "CLuaProxy");
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
 
-        lua_pushfstring(lua, "this is CLuaProxy info %d!", (*s)->ct());
+        lua_pushfstring(lua, "this is CLuaProxy info %d!", (*wrapper)->get()->ct());
 
         return 1;
     }
@@ -129,11 +103,25 @@ extern "C"
         { nullptr, nullptr }
     };
 
+    int NewCLuaProxy(lua_State* lua)
+    {
+        // 一
+        CLuaProxy **proxy = (CLuaProxy**)lua_newuserdata(lua, sizeof(CLuaProxy*));
+        *proxy = new CLuaProxy();
+
+        // 二
+        //lua_pushlightuserdata(lua, new CLuaProxy());
+
+        return 1;
+    }
+
     int CreateCLuaProxy(lua_State *lua)
     {
         //创建一个对象指针放到stack里，返回给Lua中使用，userdata的位置-1
-        CLuaProxy **proxy = (CLuaProxy**)lua_newuserdata(lua, sizeof(CLuaProxy*));
-        *proxy = new CLuaProxy();
+        ProxyWrapper **wrapper = (ProxyWrapper**)lua_newuserdata(lua, sizeof(ProxyWrapper*));
+        *wrapper = new ProxyWrapper(new CLuaProxy());
+        /*CLuaProxy **proxy = (CLuaProxy**)lua_newuserdata(lua, sizeof(CLuaProxy*));
+        *proxy = new CLuaProxy();*/
 
         //Lua->stack，得到全局元表位置-1,userdata(proxy)位置-2
         luaL_getmetatable(lua, "CLuaProxy");
@@ -141,6 +129,27 @@ extern "C"
         lua_setmetatable(lua, -2);
 
         return 1;
+    }
+
+    int AttchCLuaProxy(lua_State *lua)
+    {
+        //创建一个对象指针放到stack里，返回给Lua中使用，userdata的位置-1
+        if (lua_islightuserdata(lua, -1))
+        {
+            // light userdata不归lua 的gc管理，只有newuserdata出来的full userdata才归lua gc管理
+            CLuaProxy *proxy = (CLuaProxy*)lua_touserdata(lua, -1);
+            
+            ProxyWrapper **wrapper = (ProxyWrapper**)lua_newuserdata(lua, sizeof(ProxyWrapper*));
+            *wrapper = new ProxyWrapper(proxy, 1);
+
+            //Lua->stack，得到全局元表位置-1,userdata(proxy)位置-2
+            luaL_getmetatable(lua, "CLuaProxy");
+            //将元表赋值给位置-2的userdata(proxy)，并弹出-1的元表
+            lua_setmetatable(lua, -2);
+
+            return 1;
+        }
+        return 0;
     }
 
     int average(lua_State *lua)
@@ -176,6 +185,8 @@ extern "C"
     luaL_Reg cFuntions[] =
     {
         { "CreateCLuaProxy", CreateCLuaProxy },
+        { "AttchCLuaProxy", AttchCLuaProxy },
+        { "NewCLuaProxy", NewCLuaProxy },
         { "average", average },
         { "print_str", print_str },
         { nullptr, nullptr }
