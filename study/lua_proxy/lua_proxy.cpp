@@ -175,8 +175,15 @@ extern "C"
 
     int print_str(lua_State *lua)
     {
-        const char *str = lua_tostring(lua, -1);
-        printf("c++ print_str %s\n", str);
+        if (lua_isstring(lua, -1))
+        {
+            const char *str = lua_tostring(lua, -1);
+            printf("c++ print_str %s\n", str);
+        }
+        else if (lua_istable(lua, -1))
+        {
+            printf("c++ print_str table\n");
+        }
 
         lua_pushstring(lua, "c++ pushstring");
         return 1;

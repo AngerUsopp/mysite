@@ -7,6 +7,8 @@ print(os.date());
 print("lua average " .. lp:average(1,2,3,4, "asd"));
 print("lua print_str " .. lp:print_str("lua_proxy"));
 
+print("lua print_str table param " .. lp:print_str{name="asd"});
+
 --local proxy_obj = lp:CreateCLuaProxy();
 --print(proxy_obj);
 --proxy_obj:SayHello();
