@@ -43,16 +43,14 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 private:
-    lua_State *m_lua;
     BOOL m_bTracking;
-    CArray<CButton*> m_buttons;
+    lua_State *m_lua;
 
-    void RestoreGuiLua();
-    void RestoreGuiLuaMenu();
-    void RestoreGuiLuaButton();
+    void ReloadPlugins();
 public:
     afx_msg void OnMouseMove(UINT nFlags, CPoint point);
     afx_msg void OnMouseLeave();
     afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
     afx_msg void OnCommand(UINT uId);
+    virtual BOOL DestroyWindow();
 };

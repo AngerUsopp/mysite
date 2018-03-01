@@ -60,6 +60,10 @@
       <AdditionalDependencies>lua53.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
+    <PreBuildEvent>
+      <Command>copy $(SolutionDir)..\lua\lua53.lib $(OutDir)lua53.lib;
+copy $(SolutionDir)..\lua\lua53.dll $(OutDir)lua53.dll;</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

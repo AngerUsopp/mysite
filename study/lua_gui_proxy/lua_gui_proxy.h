@@ -25,3 +25,5 @@ public:
 
 	DECLARE_MESSAGE_MAP()
 };
+
+extern Clua_gui_proxyApp theApp;

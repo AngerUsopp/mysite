@@ -15,6 +15,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "lua\lua.vcxproj", "{BC34FFCC-B7EC-4B8C-AE42-23D7BE664557}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_gui_demo", "lua_gui_demo\lua_gui_demo.vcxproj", "{EBD16AD5-6B36-493F-9BD5-33937A98269B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{39A221A5-5DB3-4D3F-BA81-BC4441C600B3} = {39A221A5-5DB3-4D3F-BA81-BC4441C600B3}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_gui_proxy", "lua_gui_proxy\lua_gui_proxy.vcxproj", "{39A221A5-5DB3-4D3F-BA81-BC4441C600B3}"
 EndProject

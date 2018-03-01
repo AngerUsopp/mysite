@@ -1,3 +1,5 @@
+--ids = require("ids.lua");
+gui_proxy = require("lua_gui_proxy");
 
 IDM_FIRST_0 = "IDM_FIRST_0";
 IDM_FIRST_1 = "IDM_FIRST_1";
@@ -86,3 +88,8 @@ function OnButtonClick(id)
 
     return "no impl btn id = '" .. id .. "'";
 end
+
+--function domodal(hwnd)
+--    return gui_proxy:domodal();
+--end
+gui_proxy:domodal();

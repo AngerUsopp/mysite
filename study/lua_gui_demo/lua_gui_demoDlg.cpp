@@ -11,6 +11,9 @@
 #include <fcntl.h>
 #include <string>
 #include <map>
+#include <algorithm>
+#include <vector>
+#include <set>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -35,21 +38,37 @@ namespace
         DYNAMIC_CTRL_ID_BEGIN = 1000,
 
         MENU_ID_BEGIN,
-        MENU_ID_END = MENU_ID_BEGIN + 100,
-
-        BTN_ID_BEGIN,
-        BTN_ID_END = BTN_ID_BEGIN + 100,
+        MENU_ID_END = MENU_ID_BEGIN + 10000,
 
         DYNAMIC_CTRL_ID_END
     };
+    
+    const char* kInfosLua = "infos.lua";
+    const char* kLogicLua = "logic.lua";
+    const char* kLogicMainFunc = "main";
 
-    int g_menu_id = MENU_ID_BEGIN;
-    std::map<int, std::string> g_menu_map;
+    struct plugin_info
+    {
+        plugin_info()
+        {
+            id = 0;
+        }
 
-    int g_btn_id = BTN_ID_BEGIN;
-    std::map<int, std::string> g_btn_map;
+        plugin_info(const plugin_info& right)
+        {
+            id = 1;
 
-    const char* kGuiLua = "lua_script/gui.lua";
+            plugin_folder = right.plugin_folder;
+            menu_item_id_map = right.menu_item_id_map;
+        }
+
+        int id;
+        std::string plugin_folder;
+        std::map<UINT, int> menu_item_id_map;// 插件中菜单项在宿主菜单中的ID -> 插件中自己定义的菜单ID
+    };
+
+    UINT g_menu_id = MENU_ID_BEGIN;
+    std::vector<plugin_info> g_plugins_vector;
 }
 
 // Clua_gui_demoDlg 对话框
@@ -60,6 +79,7 @@ IMPLEMENT_DYNAMIC(Clua_gui_demoDlg, CDialogEx);
 Clua_gui_demoDlg::Clua_gui_demoDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(Clua_gui_demoDlg::IDD, pParent)
     , m_bTracking(FALSE)
+    , m_lua(nullptr)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_pAutoProxy = NULL;
@@ -119,9 +139,9 @@ BOOL Clua_gui_demoDlg::OnInitDialog()
     {
         // 载入Lua基本库
         luaL_openlibs(m_lua);
-        RestoreGuiLua();
     }
     //ListBox_AddItemData;
+    ReloadPlugins();
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -178,7 +198,19 @@ void Clua_gui_demoDlg::OnOK()
 {
 	/*if (CanExit())
 		CDialogEx::OnOK();*/
-    RestoreGuiLua();
+    //RestoreGuiLua();
+    //int ret = 0;
+    //std::string str;
+    //if (m_lua)
+    //{
+    //    if (LUA_TFUNCTION == lua_getglobal(m_lua, "domodal"))
+    //    {
+    //        lua_pushlightuserdata(m_lua, m_hWnd);
+    //        ret = lua_pcall(m_lua, 1, 1, 0);
+    //        ret = lua_tointeger(m_lua, -1);//IDOK
+    //    }
+    //}
+    ReloadPlugins();
 }
 
 void Clua_gui_demoDlg::OnCancel()
@@ -201,170 +233,6 @@ BOOL Clua_gui_demoDlg::CanExit()
 	return TRUE;
 }
 
-
-
-void Clua_gui_demoDlg::RestoreGuiLua()
-{
-    if (m_lua)
-    {
-        // 载入Lua基本库
-        luaL_openlibs(m_lua);
-
-        if (LUA_OK == luaL_dofile(m_lua, kGuiLua))
-        {
-            RestoreGuiLuaMenu();
-            RestoreGuiLuaButton();
-        }
-    }
-}
-
-void Clua_gui_demoDlg::RestoreGuiLuaMenu()
-{
-    g_menu_id = 1001;
-    g_menu_map.clear();
-
-    HMENU hMenu = CreateMenu();
-
-    if (m_lua)
-    {
-        if (LUA_OK == luaL_dofile(m_lua, kGuiLua))
-        {
-            if (LUA_TTABLE == lua_getglobal(m_lua, "menu"))
-            {
-                if (lua_istable(m_lua, -1))
-                {
-                    // 遍历纯粹数组
-                    lua_Integer num = luaL_len(m_lua, -1);
-                    for (lua_Integer i = 1; i <= num; ++i)
-                    {
-                        int type = lua_rawgeti(m_lua, -1, i);
-                        if (type == LUA_TTABLE)
-                        {
-                            int ret = lua_getfield(m_lua, -1, "name");
-                            std::string name = lua_tostring(m_lua, -1);
-                            lua_pop(m_lua, 1);
-
-                            ret = lua_getfield(m_lua, -1, "items");
-                            if (lua_istable(m_lua, -1))
-                            {
-                                HMENU hSubMenu = CreateMenu();
-
-                                lua_Integer items = luaL_len(m_lua, -1);
-                                for (lua_Integer item = 1; item <= items; ++item)
-                                {
-                                    type = lua_rawgeti(m_lua, -1, item);
-                                    if (type == LUA_TTABLE)
-                                    {
-                                        ret = lua_getfield(m_lua, -1, "id");
-                                        if (ret == LUA_TSTRING)
-                                        {
-                                            std::string id = lua_tostring(m_lua, -1);
-                                            lua_pop(m_lua, 1);
-
-                                            ret = lua_getfield(m_lua, -1, "text");
-                                            std::string text = lua_tostring(m_lua, -1);
-                                            lua_pop(m_lua, 1);
-
-                                            int mid = g_menu_id++;
-                                            g_menu_map[mid] = id;
-
-                                            ::AppendMenu(hSubMenu, MF_STRING, mid, CString(text.c_str()));
-                                        }
-                                        else if (ret == LUA_TNIL)
-                                        {
-                                            lua_pop(m_lua, 1);
-                                            ::AppendMenu(hSubMenu, MF_SEPARATOR, 0, nullptr);
-                                        }
-                                    }
-                                    lua_pop(m_lua, 1);
-                                }
-
-                                ::AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hSubMenu, CString(name.c_str()));
-                            }
-                            lua_pop(m_lua, 1);
-                        }
-                        lua_pop(m_lua, 1);
-                    }
-                }
-            }
-            lua_pop(m_lua, 1);
-        }
-    }
-
-    if (hMenu)
-    {
-        ::SetMenu(m_hWnd, hMenu);
-    }
-}
-
-void Clua_gui_demoDlg::RestoreGuiLuaButton()
-{
-    for (UINT i = 0; i < m_buttons.GetSize(); i++)
-    {
-        delete m_buttons[i];
-    }
-    m_buttons.RemoveAll();
-
-    if (m_lua)
-    {
-        if (LUA_TTABLE == lua_getglobal(m_lua, "buttons"))
-        {
-            if (lua_istable(m_lua, -1))
-            {
-                // 遍历纯粹数组
-                lua_Integer num = luaL_len(m_lua, -1);
-                for (lua_Integer i = 1; i <= num; ++i)
-                {
-                    int type = lua_rawgeti(m_lua, -1, i);
-                    if (type == LUA_TTABLE)
-                    {
-                        type = lua_getfield(m_lua, -1, "id");
-                        if (type == LUA_TSTRING)
-                        {
-                            std::string id = lua_tostring(m_lua, -1);
-                            lua_pop(m_lua, 1);
-
-                            type = lua_getfield(m_lua, -1, "text");
-                            std::string text = lua_tostring(m_lua, -1);
-                            lua_pop(m_lua, 1);
-
-                            type = lua_getfield(m_lua, -1, "x");
-                            int x = lua_tointeger(m_lua, -1);
-                            lua_pop(m_lua, 1);
-
-                            type = lua_getfield(m_lua, -1, "y");
-                            int y = lua_tointeger(m_lua, -1);
-                            lua_pop(m_lua, 1);
-
-                            type = lua_getfield(m_lua, -1, "width");
-                            int width = lua_tointeger(m_lua, -1);
-                            lua_pop(m_lua, 1);
-
-                            type = lua_getfield(m_lua, -1, "height");
-                            int height = lua_tointeger(m_lua, -1);
-                            lua_pop(m_lua, 1);
-
-                            int mid = g_btn_id++;
-                            g_btn_map[mid] = id;
-
-                            CButton *button = new CButton();
-                            button->Create(CString(text.c_str()), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                                CRect(x, y, x + width, y + height), this, mid);
-                            m_buttons.Add(button);
-                        }
-                        else if (type == LUA_TNIL)
-                        {
-                            lua_pop(m_lua, 1);
-                        }
-                    }
-                    lua_pop(m_lua, 1);
-                }
-            }
-        }
-        lua_pop(m_lua, 1);
-    }
-}
-
 void Clua_gui_demoDlg::OnMouseMove(UINT nFlags, CPoint point)
 {
     // TODO:  在此添加消息处理程序代码和/或调用默认值
@@ -379,29 +247,25 @@ void Clua_gui_demoDlg::OnMouseMove(UINT nFlags, CPoint point)
         m_bTracking = _TrackMouseEvent(&tme);
     }
 
-    if (m_lua)
+    /*if (m_lua)
     {
         if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnMouseMove"))
         {
             lua_pushnumber(m_lua, point.x);
             lua_pushnumber(m_lua, point.y);
             lua_pcall(m_lua, 2, 0, 0);
-
-            /*std::string ret = lua_tostring(m_lua, -1);
-            TRACE((ret + "\r\n").c_str());*/
         }
-    }
+    }*/
 
     CDialogEx::OnMouseMove(nFlags, point);
 }
-
 
 void Clua_gui_demoDlg::OnMouseLeave()
 {
     // TODO:  在此添加消息处理程序代码和/或调用默认值
     m_bTracking = FALSE;
 
-    if (m_lua)
+    /*if (m_lua)
     {
         if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnMouseExit"))
         {
@@ -410,15 +274,14 @@ void Clua_gui_demoDlg::OnMouseLeave()
             std::string ret = lua_tostring(m_lua, -1);
             TRACE((ret + "\r\n").c_str());
         }
-    }
+    }*/
     CDialogEx::OnMouseLeave();
 }
-
 
 void Clua_gui_demoDlg::OnLButtonDown(UINT nFlags, CPoint point)
 {
     // TODO:  在此添加消息处理程序代码和/或调用默认值
-    if (m_lua)
+    /*if (m_lua)
     {
         if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnMousePressed"))
         {
@@ -429,45 +292,190 @@ void Clua_gui_demoDlg::OnLButtonDown(UINT nFlags, CPoint point)
             std::string ret = lua_tostring(m_lua, -1);
             TRACE((ret + "\r\n").c_str());
         }
-    }
+    }*/
     CDialogEx::OnLButtonDown(nFlags, point);
+}
+
+void Clua_gui_demoDlg::ReloadPlugins()
+{
+    if (!m_lua)
+        return;
+
+    lua_settop(m_lua, 0);
+    g_menu_id = 1001;
+    g_plugins_vector.clear();
+
+    HMENU hMenu = CreateMenu();
+
+    TCHAR szFilePath[MAX_PATH] = { 0 }; // MAX_PATH
+    //GetModuleFileName(NULL, szFilePath, MAX_PATH);
+    //(_tcsrchr(szFilePath, _T('\\')))[1] = 0;//删除文件名，只获得路径
+    CString plugins_folder(szFilePath);
+
+    CFileFind finder;
+    BOOL bWorking = finder.FindFile(plugins_folder + L"plugins\\*.*");
+    {
+        while (bWorking)
+        {
+            bWorking = finder.FindNextFile();
+            CString plugin_path = finder.GetFilePath();
+            if (!finder.IsDots() && finder.IsDirectory())
+            {
+                if (m_lua)
+                {
+                    CStringA lua_path = CStringA(plugin_path + L"\\") + kInfosLua;
+                    if (LUA_OK == luaL_dofile(m_lua, lua_path))
+                    {
+                        int type = lua_getglobal(m_lua, "name");
+                        if (LUA_TSTRING == type)
+                        {
+                            plugin_info plugin;
+                            plugin.plugin_folder = CStringA(plugin_path);
+
+                            std::string name = lua_tostring(m_lua, -1);
+                            HMENU hPluginMenu = CreateMenu();
+                            ::AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hPluginMenu, CString(name.c_str()));
+
+                            type = lua_getglobal(m_lua, "menus");
+                            if (LUA_TTABLE == type)
+                            {
+                                // 遍历纯粹数组
+                                lua_Integer num = luaL_len(m_lua, -1);
+                                for (lua_Integer item = 1; item <= num; ++item)
+                                {
+                                    type = lua_rawgeti(m_lua, -1, item);
+                                    if (type == LUA_TTABLE)
+                                    {
+                                        bool separator = true;
+                                        int id;
+                                        std::string text;
+                                        bool enable = true;
+                                        type = lua_getfield(m_lua, -1, "id");
+                                        if (LUA_TNUMBER == type)
+                                        {
+                                            id = lua_tointeger(m_lua, -1);
+                                            separator = false;
+                                        }
+                                        lua_pop(m_lua, 1);
+
+                                        type = lua_getfield(m_lua, -1, "text");
+                                        if (LUA_TSTRING == type)
+                                        {
+                                            text = lua_tostring(m_lua, -1);
+                                        }
+                                        lua_pop(m_lua, 1);
+
+                                        type = lua_getfield(m_lua, -1, "enable");
+                                        if (LUA_TBOOLEAN == type)
+                                        {
+                                            enable = lua_toboolean(m_lua, -1);
+                                        }
+                                        lua_pop(m_lua, 1);
+
+                                        if (!separator)
+                                        {
+                                            int mid = g_menu_id++;
+                                            plugin.menu_item_id_map[mid] = id;
+
+                                            ::AppendMenu(hPluginMenu, MF_STRING | enable ? MF_ENABLED : MF_DISABLED,
+                                                mid, CString(text.c_str()));
+                                        }
+                                        else
+                                        {
+                                            ::AppendMenu(hPluginMenu, MF_SEPARATOR, 0, nullptr);
+                                        }
+                                    }
+                                    lua_pop(m_lua, 1);
+                                }
+                            }
+                            lua_pop(m_lua, 1);
+
+                            g_plugins_vector.push_back(plugin);
+                        }
+                        lua_pop(m_lua, 1);
+                    }
+                    else
+                    {
+                        std::string str = lua_tostring(m_lua, -1);
+                        TRACE(lua_tostring(m_lua, -1));
+                    }
+                }
+            }
+        }
+    }
+
+    if (hMenu)
+    {
+        ::SetMenu(m_hWnd, hMenu);
+    }
 }
 
 void Clua_gui_demoDlg::OnCommand(UINT uId)
 {
     if (MENU_ID_BEGIN <= uId && MENU_ID_END >= uId)
     {
-        if (g_menu_map.find(uId) != g_menu_map.end())
+        for (plugin_info &var : g_plugins_vector)
         {
-            if (m_lua)
+            if (var.menu_item_id_map.find(uId) != var.menu_item_id_map.end())
             {
-                if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnMenuSelected"))
+                if (m_lua)
                 {
-                    lua_pushstring(m_lua, g_menu_map[uId].c_str());
-                    lua_pcall(m_lua, 1, 1, 0);
+                    lua_settop(m_lua, 1);
+                    if (LUA_OK == luaL_dofile(m_lua, (var.plugin_folder + "\\" + kInfosLua).c_str()))
+                    {
+                        if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnMenuSelected"))
+                        {
+                            lua_pushnumber(m_lua, (LUA_NUMBER)var.menu_item_id_map[uId]);
+                            lua_pcall(m_lua, 1, 1, 0);
 
-                    std::string ret = lua_tostring(m_lua, -1);
-                    TRACE((ret + "\r\n").c_str());
+                            if (lua_isstring(m_lua, -1))
+                            {
+                                std::string dst_view = lua_tostring(m_lua, -1);
+                                if (!dst_view.empty())
+                                {
+                                    lua_State *lua = luaL_newstate();
+                                    if (lua)
+                                    {
+                                        luaL_openlibs(lua);
+
+                                        std::string path = var.plugin_folder + "\\" + dst_view + "\\" + kLogicLua;
+
+                                        if (LUA_OK == luaL_dofile(lua, path.c_str()))
+                                        {
+                                            if (LUA_TFUNCTION == lua_getglobal(m_lua, kLogicMainFunc))
+                                            {
+                                                lua_pushlightuserdata(lua, lua);
+                                                lua_pcall(lua, 1, 1, 0);
+                                                if (lua_isboolean(lua, -1))
+                                                {
+                                                    if (!lua_toboolean(lua, -1))
+                                                    {
+                                                        AfxMessageBox(L"open plugin view faild!");
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            TRACE(lua_tostring(lua, -1));
+                                            lua_close(lua);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+                break;
             }
         }
     }
+}
 
-    if (BTN_ID_BEGIN <= uId && BTN_ID_END >= uId)
-    {
-        if (g_btn_map.find(uId) != g_btn_map.end())
-        {
-            if (m_lua)
-            {
-                if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnButtonClick"))
-                {
-                    lua_pushstring(m_lua, g_btn_map[uId].c_str());
-                    lua_pcall(m_lua, 1, 1, 0);
 
-                    std::string ret = lua_tostring(m_lua, -1);
-                    TRACE((ret + "\r\n").c_str());
-                }
-            }
-        }
-    }
+BOOL Clua_gui_demoDlg::DestroyWindow()
+{
+    // TODO:  在此添加专用代码和/或调用基类
+
+    return CDialogEx::DestroyWindow();
 }
