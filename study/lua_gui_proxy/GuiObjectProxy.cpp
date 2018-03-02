@@ -2,6 +2,7 @@
 #include "GuiObjectProxy.h"
 #include "BaseDialog.h"
 #include "lua_gui_proxy.h"
+#include "lua_object.h"
 
 namespace
 {
@@ -65,27 +66,31 @@ extern "C"
 
     int DoModal(lua_State *lua)
     {
-        // 要在其他模块调用另一dll中的mfc资源有两种方式，实质是要使能从对应的模块加载那个模块自己的资源而不是用主exe的资源
-        // 一、进行模块状态切换
-        AFX_MANAGE_STATE(AfxGetStaticModuleState());
-        CBaseDialog dlg(AfxGetApp()->m_pMainWnd);
-        int ret = dlg.DoModal();
+        int ret = -1;
+        if (lua_isuserdata(lua, -1))
+        {
+            RefLuaState *L = (RefLuaState*)lua_touserdata(lua, -1);
+            // 要在其他模块调用另一dll中的mfc资源有两种方式，实质是要使能从对应的模块加载那个模块自己的资源而不是用主exe的资源
+            // 一、进行模块状态切换
+            AFX_MANAGE_STATE(AfxGetStaticModuleState());
+            CBaseDialog dlg(L, AfxGetApp()->m_pMainWnd);
+            ret = dlg.DoModal();
 
-        // 方式二
-        //HINSTANCE save_hInstance = AfxGetResourceHandle();
-        //AfxSetResourceHandle(theApp.m_hInstance);
-        //CBaseDialog dlg(AfxGetApp()->m_pMainWnd);
-        //dlg.DoModal();
-        ////方法2的状态还原
-        //AfxSetResourceHandle(save_hInstance);
-        
+            // 方式二
+            //HINSTANCE save_hInstance = AfxGetResourceHandle();
+            //AfxSetResourceHandle(theApp.m_hInstance);
+            //CBaseDialog dlg(AfxGetApp()->m_pMainWnd);
+            //dlg.DoModal();
+            ////方法2的状态还原
+            //AfxSetResourceHandle(save_hInstance);
+        }
         lua_pushnumber(lua, ret);
         return 1;
     }
 
     luaL_Reg cFuntions[] =
     {
-        { "domodal", DoModal },
+        { "DoModal", DoModal },
         { nullptr, nullptr }
     };
 

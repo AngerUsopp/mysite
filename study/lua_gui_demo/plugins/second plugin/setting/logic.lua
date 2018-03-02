@@ -20,7 +20,7 @@ gui_proxy = require("lua_gui_proxy");
 
 function main(lua)
     ret = gui_proxy:DoModal(lua);
-    return ret;
+    return (ret == 1);
 end
 
 function OnMouseMove(x, y)

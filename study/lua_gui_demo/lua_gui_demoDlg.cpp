@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <vector>
 #include <set>
+#include "..\lua_gui_proxy\lua_object.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -433,22 +434,22 @@ void Clua_gui_demoDlg::OnCommand(UINT uId)
                                 std::string dst_view = lua_tostring(m_lua, -1);
                                 if (!dst_view.empty())
                                 {
-                                    lua_State *lua = luaL_newstate();
+                                    RefLuaState lua = make_shared_lua_State();
                                     if (lua)
                                     {
-                                        luaL_openlibs(lua);
+                                        luaL_openlibs(lua.get());
 
                                         std::string path = var.plugin_folder + "\\" + dst_view + "\\" + kLogicLua;
 
-                                        if (LUA_OK == luaL_dofile(lua, path.c_str()))
+                                        if (LUA_OK == luaL_dofile(lua.get(), path.c_str()))
                                         {
-                                            if (LUA_TFUNCTION == lua_getglobal(m_lua, kLogicMainFunc))
+                                            if (LUA_TFUNCTION == lua_getglobal(lua.get(), kLogicMainFunc))
                                             {
-                                                lua_pushlightuserdata(lua, lua);
-                                                lua_pcall(lua, 1, 1, 0);
-                                                if (lua_isboolean(lua, -1))
+                                                lua_pushlightuserdata(lua.get(), &lua);
+                                                lua_pcall(lua.get(), 1, 1, 0);
+                                                if (lua_isnumber(lua.get(), -1))
                                                 {
-                                                    if (!lua_toboolean(lua, -1))
+                                                    if (-1 == lua_tointeger(lua.get(), -1))
                                                     {
                                                         AfxMessageBox(L"open plugin view faild!");
                                                     }
@@ -457,8 +458,7 @@ void Clua_gui_demoDlg::OnCommand(UINT uId)
                                         }
                                         else
                                         {
-                                            TRACE(lua_tostring(lua, -1));
-                                            lua_close(lua);
+                                            TRACE(lua_tostring(lua.get(), -1));
                                         }
                                     }
                                 }
@@ -471,7 +471,6 @@ void Clua_gui_demoDlg::OnCommand(UINT uId)
         }
     }
 }
-
 
 BOOL Clua_gui_demoDlg::DestroyWindow()
 {
