@@ -57,6 +57,7 @@ extern "C"
         if (lua_isinteger(lua, -1))
         {
             int ret = lua_tointeger(lua, -1);
+            AFX_MANAGE_STATE(AfxGetStaticModuleState());
             (*wrapper)->get()->EndDialog(ret);
         }
 
@@ -170,6 +171,7 @@ extern "C"
         RefLuaState *L = (RefLuaState*)lua_touserdata(lua, -1);
         //创建一个对象指针放到stack里，返回给Lua中使用，userdata的位置-1
         RefBaseDialog **shareptr = (RefBaseDialog**)lua_newuserdata(lua, sizeof(RefBaseDialog*));
+        AFX_MANAGE_STATE(AfxGetStaticModuleState());
         *shareptr = new RefBaseDialog(new CBaseDialog(L, AfxGetApp()->m_pMainWnd), RefBaseDialogDeleter);
 
         //Lua->stack，得到全局元表位置-1,userdata(proxy)位置-2
@@ -207,6 +209,9 @@ extern "C"
         lua_setfield(lua, -2, "__index");
         //将成员函数注册到元表中（到这里，全局元表的设置就全部完成了）
         luaL_setfuncs(lua, kWidgetMemberFuncs, 0);
+
+        lua_pushinteger(lua, IDCANCEL);
+        lua_setglobal(lua, "IDCANCEL");
 
         // 注册该库的函数
         luaL_newlib(lua, cFuntions);

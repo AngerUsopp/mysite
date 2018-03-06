@@ -43,30 +43,36 @@ end
 function OnCommand(id, code)
     if widget ~= nil then
         if id == IDC_BUTTON_OK then
-            --widget:EndDialog(1);
+
             local cb = widget:IsDlgButtonChecked(IDC_CHECK_ENABLE);
             if cb then
                 cbt = "true";
             else
                 cbt = "false";
             end
+
             local r1 = widget:IsDlgButtonChecked(IDC_RADIO_FIRST);
             if r1 then
                 rt1 = "true";
             else
                 rt1 = "false";
             end
+
             local r2 = widget:IsDlgButtonChecked(IDC_RADIO_SECOND);
             if cb then
                 rt2 = "true";
             else
                 rt2 = "false";
             end
+
             local edit_text = widget:Edit_GetText(IDC_EDIT_INPUT);
+            
             gui_proxy:MessageBox(string.format("checkbox=%s, radiofirst=%s, radiosecond=%s, edittext='%s'", 
                 cbt, rt1, rt2, edit_text));
         elseif id == IDC_BUTTON_CANCEL then
             widget:EndDialog(2);
+        elseif id == IDCANCEL then
+            gui_proxy:MessageBox("cancel button click");
         else
             --gui_proxy:MessageBox(string.format("lua OnCommand(%d, %d)", id, code));
         end
