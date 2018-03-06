@@ -38,6 +38,7 @@ void CBaseDialog::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(CBaseDialog, CDialogEx)
+    ON_MESSAGE(WM_KICKIDLE, OnKickIdle)    
 END_MESSAGE_MAP()
 
 
@@ -47,9 +48,11 @@ END_MESSAGE_MAP()
 BOOL CBaseDialog::DestroyWindow()
 {
     // TODO:  在此添加专用代码和/或调用基类
+    bool bret = CDialogEx::DestroyWindow();
+
     RemoveAllChild();
 
-    return CDialogEx::DestroyWindow();
+    return bret;
 }
 
 BOOL CBaseDialog::OnInitDialog()
@@ -58,6 +61,8 @@ BOOL CBaseDialog::OnInitDialog()
 
     // TODO:  在此添加额外的初始化
     Layout();
+
+    //ListBox_AddItemData
 
     return TRUE;  // return TRUE unless you set the focus to a control
     // 异常:  OCX 属性页应返回 FALSE
@@ -188,4 +193,30 @@ void CBaseDialog::Layout()
         }
         lua_pop(m_lua.get(), 1);
     }
+}
+
+BOOL CBaseDialog::OnCommand(WPARAM wParam, LPARAM lParam)
+{
+    // TODO:  在此添加专用代码和/或调用基类
+    if (m_lua)
+    {
+        if (!call_lua_func(m_lua, "OnCommand", 0, 
+            "%d %d %b %p", LOWORD(wParam), HIWORD(wParam)))
+        {
+            TRACE("no OnCommand lua fun \r\n");
+        }
+    }
+    return CDialogEx::OnCommand(wParam, lParam);
+}
+
+LRESULT CBaseDialog::OnKickIdle(WPARAM wParam, LPARAM lParam)
+{
+    if (m_lua)
+    {
+        if (!call_lua_func(m_lua, "OnKickIdle", 0, nullptr))
+        {
+            TRACE("no OnKickIdle lua fun \r\n");
+        }
+    }
+    return 0;
 }

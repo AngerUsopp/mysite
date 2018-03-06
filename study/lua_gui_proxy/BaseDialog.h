@@ -25,7 +25,7 @@ class CBaseDialog : public CDialogEx
 	DECLARE_DYNAMIC(CBaseDialog)
 
 public:
-    CBaseDialog(RefLuaState *lua, CWnd* pParent = NULL);   // 标准构造函数
+    explicit CBaseDialog(RefLuaState *lua, CWnd* pParent = NULL);   // 标准构造函数
 	virtual ~CBaseDialog();
 
 // 对话框数据
@@ -48,4 +48,8 @@ private:
 public:
     virtual BOOL DestroyWindow();
     virtual BOOL OnInitDialog();
+    virtual BOOL OnCommand(WPARAM wParam, LPARAM lParam);
+    afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
 };
+
+typedef std::shared_ptr<CBaseDialog> RefBaseDialog;

@@ -7,7 +7,7 @@ name = "test plugin(&T)";
 menus = {
     { id = IDM_OPEN, text = "Open(&O)", enable = true },
     {},
-    { id = IDM_END, text = "disable item", enable = true }
+    { id = IDM_END, text = "disable item", enable = false }
 };
 
 function OnMenuSelected(id)
@@ -16,6 +16,6 @@ function OnMenuSelected(id)
     elseif id == IDM_END then
     end
 
-    print(info.source .. "\t not impl item = " .. id);
-    return nil;
+    print("not impl item = " .. id);
+    return "";
 end

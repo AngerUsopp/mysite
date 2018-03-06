@@ -16,11 +16,61 @@ dofile(path .. "layout.lua");  -- 虽然可以“引用”，但需要加载并执行整份脚本
 
 
 gui_proxy = require("lua_gui_proxy");
-
+local widget = nil;
 
 function main(lua)
-    ret = gui_proxy:DoModal(lua);
+    widget = gui_proxy:CreateWidget(lua);
+    ret = widget:DoModal(lua);
+    widget = nil;
+
+    collectgarbage("collect");
+
     return ret;
+end
+
+function OnKickIdle()
+    if widget ~= nil then
+        if widget:IsDlgButtonChecked(IDC_CHECK_ENABLE) == true then
+            widget:SetDlgItemEnable(IDC_RADIO_FIRST, true);
+            widget:SetDlgItemEnable(IDC_RADIO_SECOND, true);
+        else
+            widget:SetDlgItemEnable(IDC_RADIO_FIRST, false);
+            widget:SetDlgItemEnable(IDC_RADIO_SECOND, false);
+        end
+    end
+end
+
+function OnCommand(id, code)
+    if widget ~= nil then
+        if id == IDC_BUTTON_OK then
+            --widget:EndDialog(1);
+            local cb = widget:IsDlgButtonChecked(IDC_CHECK_ENABLE);
+            if cb then
+                cbt = "true";
+            else
+                cbt = "false";
+            end
+            local r1 = widget:IsDlgButtonChecked(IDC_RADIO_FIRST);
+            if r1 then
+                rt1 = "true";
+            else
+                rt1 = "false";
+            end
+            local r2 = widget:IsDlgButtonChecked(IDC_RADIO_SECOND);
+            if cb then
+                rt2 = "true";
+            else
+                rt2 = "false";
+            end
+            local edit_text = widget:Edit_GetText(IDC_EDIT_INPUT);
+            gui_proxy:MessageBox(string.format("checkbox=%s, radiofirst=%s, radiosecond=%s, edittext='%s'", 
+                cbt, rt1, rt2, edit_text));
+        elseif id == IDC_BUTTON_CANCEL then
+            widget:EndDialog(2);
+        else
+            --gui_proxy:MessageBox(string.format("lua OnCommand(%d, %d)", id, code));
+        end
+    end
 end
 
 function OnMouseMove(x, y)

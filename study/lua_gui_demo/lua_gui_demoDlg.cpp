@@ -114,6 +114,8 @@ BEGIN_MESSAGE_MAP(Clua_gui_demoDlg, CDialogEx)
     ON_WM_MOUSELEAVE()
     ON_WM_LBUTTONDOWN()
     ON_COMMAND_RANGE(DYNAMIC_CTRL_ID_BEGIN, DYNAMIC_CTRL_ID_END, OnCommand)
+    ON_WM_UPDATEUISTATE()
+    ON_UPDATE_COMMAND_UI_RANGE(MENU_ID_BEGIN, MENU_ID_END, OnUpdateCommandUIRange)
 END_MESSAGE_MAP()
 
 
@@ -145,6 +147,13 @@ BOOL Clua_gui_demoDlg::OnInitDialog()
     ReloadPlugins();
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
+}
+
+BOOL Clua_gui_demoDlg::DestroyWindow()
+{
+    // TODO:  在此添加专用代码和/或调用基类
+
+    return CDialogEx::DestroyWindow();
 }
 
 // 如果向对话框添加最小化按钮，则需要下面的代码
@@ -303,7 +312,7 @@ void Clua_gui_demoDlg::ReloadPlugins()
         return;
 
     lua_settop(m_lua, 0);
-    g_menu_id = 1001;
+    g_menu_id = MENU_ID_BEGIN;
     g_plugins_vector.clear();
 
     HMENU hMenu = CreateMenu();
@@ -472,9 +481,14 @@ void Clua_gui_demoDlg::OnCommand(UINT uId)
     }
 }
 
-BOOL Clua_gui_demoDlg::DestroyWindow()
+void Clua_gui_demoDlg::OnUpdateCommandUIRange(CCmdUI* uId)
 {
-    // TODO:  在此添加专用代码和/或调用基类
+    int id = uId->m_nID;
+}
 
-    return CDialogEx::DestroyWindow();
+void Clua_gui_demoDlg::OnUpdateUIState(UINT /*nAction*/, UINT /*nUIElement*/)
+{
+    // 该功能要求使用 Windows 2000 或更高版本。
+    // 符号 _WIN32_WINNT 和 WINVER 必须 >= 0x0500。
+    // TODO:  在此处添加消息处理程序代码
 }

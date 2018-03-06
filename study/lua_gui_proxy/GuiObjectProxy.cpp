@@ -3,68 +3,145 @@
 #include "BaseDialog.h"
 #include "lua_gui_proxy.h"
 #include "lua_object.h"
+#include <windowsx.h>
 
 namespace
 {
+    const char *kWidgetClassName = "widget";
     CBaseDialog *g_dialog = nullptr;
+
+    void RefBaseDialogDeleter(CBaseDialog *dialog)
+    {
+        if (dialog)
+        {
+            if (dialog->GetSafeHwnd())
+            {
+                dialog->EndDialog(IDCANCEL);
+            }
+            delete dialog;
+        }
+    }
 }
 
 extern "C"
 {
-    //int CLuaProxy_NotMenberFn(lua_State *lua)
-    //{
-    //    printf("CLuaProxy_NotMenberFn \n");
-    //    return 0;
-    //}
+    int widget_gc(lua_State *lua)
+    {
+        //得到第一个传入的对象参数（在stack最底部）
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        if (wrapper)
+        {
+            delete (*wrapper);
+        }
+        return 0;
+    }
 
-    //int CLuaProxy_SayHello(lua_State *lua)
-    //{
-    //    //得到第一个传入的对象参数（在stack最底部）
-    //    ProxyWrapper **wrapper = (ProxyWrapper**)luaL_checkudata(lua, 1, "CLuaProxy");
-    //    luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+    int widget_DoModal(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
 
-    //    (*wrapper)->get()->SayHello();
+        AFX_MANAGE_STATE(AfxGetStaticModuleState());
+        int ret = (*wrapper)->get()->DoModal();
 
-    //    //清空stack
-    //    //lua_settop(lua, 0);
+        lua_pushnumber(lua, ret);
 
-    //    //将数据放入stack中，供Lua使用
-    //    //lua_pushstring(lua, "proxy say sth");
+        return 1;
+    }
 
-    //    return 0;
-    //}
+    int widget_EndDialog(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
 
-    //int CLuaProxy_gc(lua_State *lua)
-    //{
-    //    //得到第一个传入的对象参数（在stack最底部）
-    //    ProxyWrapper **wrapper = (ProxyWrapper**)luaL_checkudata(lua, 1, "CLuaProxy");
-    //    if (wrapper)
-    //    {
-    //        delete (*wrapper);
-    //    }
-    //    return 0;
-    //}
+        if (lua_isinteger(lua, -1))
+        {
+            int ret = lua_tointeger(lua, -1);
+            (*wrapper)->get()->EndDialog(ret);
+        }
 
-    //int CLuaProxy_tostring(lua_State *lua)
-    //{
-    //    ProxyWrapper **wrapper = (ProxyWrapper**)luaL_checkudata(lua, 1, "CLuaProxy");
-    //    luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+        return 0;
+    }
 
-    //    lua_pushfstring(lua, "this is CLuaProxy info %d!", (*wrapper)->get()->ct());
+    int widget_IsDlgButtonChecked(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
 
-    //    return 1;
-    //}
+        bool checked = false;
+        if (lua_isinteger(lua, -1))
+        {
+            int id = lua_tointeger(lua, -1);
+            AFX_MANAGE_STATE(AfxGetStaticModuleState());
+            checked = ((*wrapper)->get()->IsDlgButtonChecked(id) != 0);
+        }
 
-    //luaL_Reg kProxyMemberFuncs[] =
-    //{
-    //    { "NotMenberFn", CLuaProxy_NotMenberFn },
-    //    { "SayHello", CLuaProxy_SayHello },
-    //    { "__gc", CLuaProxy_gc },
-    //    { "__tostring", CLuaProxy_tostring },
-    //    { nullptr, nullptr }
-    //};
+        lua_pushboolean(lua, checked);
 
-    int DoModal(lua_State *lua)
+        return 1;
+    }
+
+    int widget_SetDlgItemEnable(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+
+        if (lua_isinteger(lua, -2) && lua_isboolean(lua, -1))
+        {
+            int id = lua_tointeger(lua, -2);
+            int enable = lua_toboolean(lua, -1);
+            AFX_MANAGE_STATE(AfxGetStaticModuleState());
+            CWnd *pWnd = (*wrapper)->get()->GetDlgItem(id);
+            if (pWnd)
+            {
+                pWnd->EnableWindow(enable);
+            }
+        }
+
+        return 0;
+    }
+
+    int widget_Edit_GetText(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+
+        CStringA astr;
+        if (lua_isinteger(lua, -1))
+        {
+            int id = lua_tointeger(lua, -1);
+            AFX_MANAGE_STATE(AfxGetStaticModuleState());
+            CWnd *pWnd = (*wrapper)->get()->GetDlgItem(id);
+            if (pWnd)
+            {
+                int len = Edit_GetTextLength(pWnd->m_hWnd);
+                len++;
+                wchar_t *buff = new wchar_t[len];
+                Edit_GetText(pWnd->m_hWnd, buff, len);
+                astr = CStringA(buff);
+                delete buff;
+            }
+        }
+
+        lua_pushstring(lua, astr.GetBuffer());
+        astr.ReleaseBuffer();
+
+        return 1;
+    }
+
+    luaL_Reg kWidgetMemberFuncs[] =
+    {
+        { "DoModal", widget_DoModal },
+        { "EndDialog", widget_EndDialog },
+        { "IsDlgButtonChecked", widget_IsDlgButtonChecked },
+        { "SetDlgItemEnable", widget_SetDlgItemEnable },
+        { "Edit_GetText", widget_Edit_GetText },
+        { "__gc", widget_gc },
+        //{ "__tostring", widget_tostring },
+        { nullptr, nullptr }
+    };
+
+    int WidgetDoModal(lua_State *lua)
     {
         int ret = -1;
         if (lua_isuserdata(lua, -1))
@@ -88,22 +165,48 @@ extern "C"
         return 1;
     }
 
+    int CreateWidget(lua_State *lua)
+    {
+        RefLuaState *L = (RefLuaState*)lua_touserdata(lua, -1);
+        //创建一个对象指针放到stack里，返回给Lua中使用，userdata的位置-1
+        RefBaseDialog **shareptr = (RefBaseDialog**)lua_newuserdata(lua, sizeof(RefBaseDialog*));
+        *shareptr = new RefBaseDialog(new CBaseDialog(L, AfxGetApp()->m_pMainWnd), RefBaseDialogDeleter);
+
+        //Lua->stack，得到全局元表位置-1,userdata(proxy)位置-2
+        luaL_getmetatable(lua, kWidgetClassName);
+        //将元表赋值给位置-2的userdata(proxy)，并弹出-1的元表
+        lua_setmetatable(lua, -2);
+
+        return 1;
+    }
+
+    int ShowMessageBox(lua_State *lua)
+    {
+        if (lua_isstring(lua, -1))
+        {
+            AfxMessageBox(CString(lua_tostring(lua, -1)));
+        }
+        return 0;
+    }
+
     luaL_Reg cFuntions[] =
     {
-        { "DoModal", DoModal },
+        { "DoModal", WidgetDoModal },
+        { "CreateWidget", CreateWidget },
+        { "MessageBox", ShowMessageBox },
         { nullptr, nullptr }
     };
 
     __declspec(dllexport) int luaopen_lua_gui_proxy(lua_State *lua)
     {
-        ////创建全局元表（里面包含了对LUA_REGISTRYINDEX的操作），元表的位置为-1
-        //luaL_newmetatable(lua, "CLuaProxy");
-        ////将元表作为一个副本压栈到位置-1，原元表位置-2
-        //lua_pushvalue(lua, -1);
-        ////设置-2位置元表的__index索引的值为位置-1的元表，并弹出位置-1的元表，原元表的位置为-1
-        //lua_setfield(lua, -2, "__index");
-        ////将成员函数注册到元表中（到这里，全局元表的设置就全部完成了）
-        //luaL_setfuncs(lua, kProxyMemberFuncs, 0);
+        //创建全局元表（里面包含了对LUA_REGISTRYINDEX的操作），元表的位置为-1
+        luaL_newmetatable(lua, kWidgetClassName);
+        //将元表作为一个副本压栈到位置-1，原元表位置-2
+        lua_pushvalue(lua, -1);
+        //设置-2位置元表的__index索引的值为位置-1的元表，并弹出位置-1的元表，原元表的位置为-1
+        lua_setfield(lua, -2, "__index");
+        //将成员函数注册到元表中（到这里，全局元表的设置就全部完成了）
+        luaL_setfuncs(lua, kWidgetMemberFuncs, 0);
 
         // 注册该库的函数
         luaL_newlib(lua, cFuntions);
