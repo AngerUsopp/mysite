@@ -18,12 +18,30 @@ dofile(path .. "layout.lua");  -- 虽然可以“引用”，但需要加载并执行整份脚本
 gui_proxy = require("lua_gui_proxy");
 local widget = nil;
 
+local cort = coroutine.create(function (str)
+
+        widget:Edit_AppendText(IDC_EDIT_INPUT, string.format("cort start '%s'\r\n", str));
+
+        local rs = coroutine.yield("yield first time");
+        widget:Edit_AppendText(IDC_EDIT_INPUT, string.format("yield param = '%s'\r\n", rs));
+        
+        return "cort end"
+    end)
+
+local function resumecort(str)
+    local state, ret = coroutine.resume(cort, str);
+    widget:Edit_AppendText(IDC_EDIT_INPUT, string.format("resume state = %s, ret = '%s'\r\n", 
+        state and "true" or "false", ret));
+end
+
 function main(lua)
     widget = gui_proxy:CreateWidget(lua);
-    ret = widget:DoModal(lua);
-    widget = nil;
 
-    collectgarbage("collect");
+    --ret = widget:DoModal(lua);
+    --widget = nil;
+    --collectgarbage("collect");
+
+    ret = widget:Create();
 
     return ret;
 end
@@ -43,34 +61,23 @@ end
 function OnCommand(id, code)
     if widget ~= nil then
         if id == IDC_BUTTON_OK then
-
+                    
             local cb = widget:IsDlgButtonChecked(IDC_CHECK_ENABLE);
-            if cb then
-                cbt = "true";
-            else
-                cbt = "false";
-            end
-
             local r1 = widget:IsDlgButtonChecked(IDC_RADIO_FIRST);
-            if r1 then
-                rt1 = "true";
-            else
-                rt1 = "false";
-            end
-
             local r2 = widget:IsDlgButtonChecked(IDC_RADIO_SECOND);
-            if cb then
-                rt2 = "true";
-            else
-                rt2 = "false";
-            end
-
             local edit_text = widget:Edit_GetText(IDC_EDIT_INPUT);
-            
-            gui_proxy:MessageBox(string.format("checkbox=%s, radiofirst=%s, radiosecond=%s, edittext='%s'", 
-                cbt, rt1, rt2, edit_text));
+
+            --gui_proxy:MessageBox(string.format("checkbox=%s, radiofirst=%s, radiosecond=%s, edittext='%s'", 
+            --    cb and "true" or "false", 
+            --    r1 and "true" or "false", 
+            --    r2 and "true" or "false", 
+            --    edit_text));
+
+            resumecort("resume");
+
         elseif id == IDC_BUTTON_CANCEL then
-            widget:EndDialog(2);
+            --widget:EndDialog(2);
+            widget:DestroyWindow();
         elseif id == IDCANCEL then
             gui_proxy:MessageBox("cancel button click");
         else
@@ -80,30 +87,14 @@ function OnCommand(id, code)
 end
 
 function OnMouseMove(x, y)
-    --return ("lua OnMouseMove");
-end
-
-function OnMousePressed(x, y)
-    return ("lua OnMousePressed");
+    if widget ~= nil then
+        widget:SetDlgItemText(IDC_STATIC_STATUE, string.format("%d, %d", x, y));
+    end
 end
 
 function OnMouseExit()
-    return ("lua OnMouseExit");
+    if widget ~= nil then
+        widget:SetDlgItemText(IDC_STATIC_STATUE, "mouse leave");
+    end
 end
 
-function OnButtonClick(id)
-    if id == IDB_BUTTON_0 then
-        return ("lua btn click id = 'IDB_BUTTON_0'");
-    end
-    if id == IDB_BUTTON_1 then
-        return ("lua btn click id = 'IDB_BUTTON_1'");
-    end
-    if id == IDB_BUTTON_2 then
-        return ("lua btn click id = 'IDB_BUTTON_2'");
-    end
-    if id == IDB_BUTTON_3 then
-        return ("lua btn click id = 'IDB_BUTTON_3'");
-    end
-
-    return "no impl btn id = '" .. id .. "'";
-end

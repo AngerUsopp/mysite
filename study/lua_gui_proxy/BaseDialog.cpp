@@ -15,6 +15,8 @@ namespace
 
     const char* kTitleField = "title";
     const char* kIconField = "icon";
+    const char* kWidthField = "width";
+    const char* kHeightField = "height";
     const char* kLayoutField = "layout";
 }
 // CBaseDialog 对话框
@@ -24,6 +26,7 @@ IMPLEMENT_DYNAMIC(CBaseDialog, CDialogEx)
 CBaseDialog::CBaseDialog(RefLuaState *lua, CWnd* pParent /*=NULL*/)
 	: CDialogEx(CBaseDialog::IDD, pParent)
     , m_lua(*lua)
+    , m_bTracking(FALSE)
 {
 }
 
@@ -38,7 +41,9 @@ void CBaseDialog::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(CBaseDialog, CDialogEx)
-    ON_MESSAGE(WM_KICKIDLE, OnKickIdle)    
+    ON_MESSAGE(WM_KICKIDLE, OnKickIdle)
+    ON_WM_MOUSEMOVE()
+    ON_WM_MOUSELEAVE()
 END_MESSAGE_MAP()
 
 
@@ -124,6 +129,8 @@ void CBaseDialog::Layout()
     {
         std::string title;
         std::string icon;
+        int width = 500;
+        int height = 500;
         if (LUA_TSTRING == lua_getglobal(m_lua.get(), kTitleField))
         {
             title = lua_tostring(m_lua.get(), -1);
@@ -134,11 +141,25 @@ void CBaseDialog::Layout()
             icon = lua_tostring(m_lua.get(), -1);
         }
         lua_pop(m_lua.get(), 1);
+        if (LUA_TNUMBER == lua_getglobal(m_lua.get(), kWidthField))
+        {
+            width = lua_tointeger(m_lua.get(), -1);
+        }
+        lua_pop(m_lua.get(), 1);
+        if (LUA_TNUMBER == lua_getglobal(m_lua.get(), kHeightField))
+        {
+            height = lua_tointeger(m_lua.get(), -1);
+        }
+        lua_pop(m_lua.get(), 1);
 
         if (!title.empty())
         {
             SetWindowText(CString(title.c_str()));
         }
+        if (!icon.empty())
+        {
+        }
+        SetWindowPos(nullptr, 0, 0, width, height, SWP_NOZORDER | SWP_NOMOVE);
 
         if (LUA_TTABLE == lua_getglobal(m_lua.get(), kLayoutField))
         {
@@ -206,7 +227,11 @@ BOOL CBaseDialog::OnCommand(WPARAM wParam, LPARAM lParam)
             TRACE("no OnCommand lua fun \r\n");
         }
     }
-    return CDialogEx::OnCommand(wParam, lParam);
+    if (GetSafeHwnd())
+    {
+        return CDialogEx::OnCommand(wParam, lParam);
+    }
+    return TRUE;
 }
 
 LRESULT CBaseDialog::OnKickIdle(WPARAM wParam, LPARAM lParam)
@@ -219,4 +244,33 @@ LRESULT CBaseDialog::OnKickIdle(WPARAM wParam, LPARAM lParam)
         }
     }
     return 0;
+}
+
+void CBaseDialog::OnMouseMove(UINT nFlags, CPoint point)
+{
+    // TODO:  在此添加消息处理程序代码和/或调用默认值
+    if (!m_bTracking)
+    {
+        //   鼠标移入窗时，请求WM_MOUSEHOVER和WM_MOUSELEAVE 消息  
+        TRACKMOUSEEVENT tme;
+        tme.cbSize = sizeof(tme);
+        tme.hwndTrack = m_hWnd;
+        tme.dwFlags = TME_LEAVE | TME_HOVER;
+        tme.dwHoverTime = 1;
+        m_bTracking = _TrackMouseEvent(&tme);
+    }
+
+    call_lua_func(m_lua, "OnMouseMove", 0, "%d,%d", point.x, point.y);
+
+    CDialogEx::OnMouseMove(nFlags, point);
+}
+
+void CBaseDialog::OnMouseLeave()
+{
+    // TODO:  在此添加消息处理程序代码和/或调用默认值
+    m_bTracking = FALSE;
+
+    call_lua_func(m_lua, "OnMouseExit", 0, nullptr);
+
+    CDialogEx::OnMouseLeave();
 }

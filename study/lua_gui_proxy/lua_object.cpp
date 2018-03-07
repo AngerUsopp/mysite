@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "lua_object.h"
 #include <stdarg.h>
+#include <string>
 
 namespace
 {
@@ -93,7 +94,10 @@ bool call_lua_func(RefLuaState lua, const char *const func, int return_count, co
             va_end(argp);
         }
 
-        lua_pcall(lua.get(), n, return_count, 0);
+        if (0 != lua_pcall(lua.get(), n, return_count, 0))
+        {
+            TRACE((std::string(lua_tostring(lua.get(), -1)) + "\r\n").c_str());
+        }
 
         return true;
     }

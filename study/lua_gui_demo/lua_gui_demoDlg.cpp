@@ -110,9 +110,6 @@ BEGIN_MESSAGE_MAP(Clua_gui_demoDlg, CDialogEx)
     ON_WM_CLOSE()
     ON_WM_PAINT()
     ON_WM_QUERYDRAGICON()
-    ON_WM_MOUSEMOVE()
-    ON_WM_MOUSELEAVE()
-    ON_WM_LBUTTONDOWN()
     ON_COMMAND_RANGE(DYNAMIC_CTRL_ID_BEGIN, DYNAMIC_CTRL_ID_END, OnCommand)
     ON_WM_UPDATEUISTATE()
     ON_UPDATE_COMMAND_UI_RANGE(MENU_ID_BEGIN, MENU_ID_END, OnUpdateCommandUIRange)
@@ -241,69 +238,6 @@ BOOL Clua_gui_demoDlg::CanExit()
 	}
 
 	return TRUE;
-}
-
-void Clua_gui_demoDlg::OnMouseMove(UINT nFlags, CPoint point)
-{
-    // TODO:  在此添加消息处理程序代码和/或调用默认值
-    if (!m_bTracking)
-    {
-        //   鼠标移入窗时，请求WM_MOUSEHOVER和WM_MOUSELEAVE 消息  
-        TRACKMOUSEEVENT tme;
-        tme.cbSize = sizeof(tme);
-        tme.hwndTrack = m_hWnd;
-        tme.dwFlags = TME_LEAVE | TME_HOVER;
-        tme.dwHoverTime = 1;
-        m_bTracking = _TrackMouseEvent(&tme);
-    }
-
-    /*if (m_lua)
-    {
-        if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnMouseMove"))
-        {
-            lua_pushnumber(m_lua, point.x);
-            lua_pushnumber(m_lua, point.y);
-            lua_pcall(m_lua, 2, 0, 0);
-        }
-    }*/
-
-    CDialogEx::OnMouseMove(nFlags, point);
-}
-
-void Clua_gui_demoDlg::OnMouseLeave()
-{
-    // TODO:  在此添加消息处理程序代码和/或调用默认值
-    m_bTracking = FALSE;
-
-    /*if (m_lua)
-    {
-        if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnMouseExit"))
-        {
-            lua_pcall(m_lua, 0, 1, 0);
-
-            std::string ret = lua_tostring(m_lua, -1);
-            TRACE((ret + "\r\n").c_str());
-        }
-    }*/
-    CDialogEx::OnMouseLeave();
-}
-
-void Clua_gui_demoDlg::OnLButtonDown(UINT nFlags, CPoint point)
-{
-    // TODO:  在此添加消息处理程序代码和/或调用默认值
-    /*if (m_lua)
-    {
-        if (LUA_TFUNCTION == lua_getglobal(m_lua, "OnMousePressed"))
-        {
-            lua_pushnumber(m_lua, point.x);
-            lua_pushnumber(m_lua, point.y);
-            lua_pcall(m_lua, 2, 1, 0);
-
-            std::string ret = lua_tostring(m_lua, -1);
-            TRACE((ret + "\r\n").c_str());
-        }
-    }*/
-    CDialogEx::OnLButtonDown(nFlags, point);
 }
 
 void Clua_gui_demoDlg::ReloadPlugins()

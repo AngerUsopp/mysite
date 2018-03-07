@@ -44,12 +44,15 @@ private:
 private:
     RefLuaState m_lua;
     CArray<CWnd*> m_ctrls;
+    BOOL m_bTracking;
 
 public:
     virtual BOOL DestroyWindow();
     virtual BOOL OnInitDialog();
     virtual BOOL OnCommand(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnKickIdle(WPARAM, LPARAM);
+    afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+    afx_msg void OnMouseLeave();
 };
 
 typedef std::shared_ptr<CBaseDialog> RefBaseDialog;

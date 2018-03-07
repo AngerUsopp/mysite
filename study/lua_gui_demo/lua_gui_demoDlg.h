@@ -49,9 +49,6 @@ private:
     void ReloadPlugins();
 public:
     virtual BOOL DestroyWindow();
-    afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-    afx_msg void OnMouseLeave();
-    afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
     afx_msg void OnCommand(UINT uId);
     afx_msg void OnUpdateCommandUIRange(CCmdUI* uId);
     afx_msg void OnUpdateUIState(UINT /*nAction*/, UINT /*nUIElement*/);

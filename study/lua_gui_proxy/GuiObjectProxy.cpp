@@ -64,6 +64,33 @@ extern "C"
         return 0;
     }
 
+    int widget_Create(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+
+        AFX_MANAGE_STATE(AfxGetStaticModuleState());
+        BOOL ret = (*wrapper)->get()->Create(CBaseDialog::IDD);
+        (*wrapper)->get()->ShowWindow(SW_SHOW);
+
+        lua_pushboolean(lua, ret);
+
+        return 1;
+    }
+
+    int widget_DestroyWindow(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+
+        AFX_MANAGE_STATE(AfxGetStaticModuleState());
+        BOOL ret = (*wrapper)->get()->DestroyWindow();
+
+        lua_pushboolean(lua, ret);
+
+        return 1;
+    }
+
     int widget_IsDlgButtonChecked(lua_State *lua)
     {
         RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
@@ -113,7 +140,7 @@ extern "C"
             int id = lua_tointeger(lua, -1);
             AFX_MANAGE_STATE(AfxGetStaticModuleState());
             CWnd *pWnd = (*wrapper)->get()->GetDlgItem(id);
-            if (pWnd)
+            if (pWnd && strcmp(pWnd->GetRuntimeClass()->m_lpszClassName, "CEdit") == 0)
             {
                 int len = Edit_GetTextLength(pWnd->m_hWnd);
                 len++;
@@ -130,13 +157,89 @@ extern "C"
         return 1;
     }
 
+    int widget_Edit_AppendText(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+
+        CStringA astr;
+        if (lua_isinteger(lua, -2) && lua_isstring(lua, -1))
+        {
+            const char *text = lua_tostring(lua, -1);
+            int id = lua_tointeger(lua, -2);
+            AFX_MANAGE_STATE(AfxGetStaticModuleState());
+            CWnd *pWnd = (*wrapper)->get()->GetDlgItem(id);
+            if (pWnd && strcmp(pWnd->GetRuntimeClass()->m_lpszClassName, "CEdit") == 0)
+            {
+                CEdit *pEdit = (CEdit*)pWnd;
+                Edit_SetSel(pWnd->m_hWnd, -1, -1);
+                Edit_ReplaceSel(pWnd->m_hWnd, CString(text));
+            }
+        }
+
+        return 0;
+    }
+
+    int widget_GetDlgItemText(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+
+        CStringA astr;
+        if (lua_isinteger(lua, -1))
+        {
+            int id = lua_tointeger(lua, -1);
+            AFX_MANAGE_STATE(AfxGetStaticModuleState());
+            CWnd *pWnd = (*wrapper)->get()->GetDlgItem(id);
+            if (pWnd)
+            {
+                CString cstr;
+                pWnd->GetWindowText(cstr);
+                astr = CStringA(cstr);
+            }
+        }
+
+        lua_pushstring(lua, astr.GetBuffer());
+        astr.ReleaseBuffer();
+
+        return 1;
+    }
+
+    int widget_SetDlgItemText(lua_State *lua)
+    {
+        RefBaseDialog **wrapper = (RefBaseDialog**)luaL_checkudata(lua, 1, kWidgetClassName);
+        luaL_argcheck(lua, wrapper != NULL, 1, "invalid data");
+
+        CStringA astr;
+        if (lua_isinteger(lua, -2) && lua_isstring(lua, -1))
+        {
+            const char *text = lua_tostring(lua, -1);
+            int id = lua_tointeger(lua, -2);
+            AFX_MANAGE_STATE(AfxGetStaticModuleState());
+            CWnd *pWnd = (*wrapper)->get()->GetDlgItem(id);
+            if (pWnd)
+            {
+                pWnd->SetWindowText(CString(text));
+            }
+        }
+
+        return 0;
+    }
+
     luaL_Reg kWidgetMemberFuncs[] =
     {
         { "DoModal", widget_DoModal },
         { "EndDialog", widget_EndDialog },
+        { "Create", widget_Create },
+        { "DestroyWindow", widget_DestroyWindow },
         { "IsDlgButtonChecked", widget_IsDlgButtonChecked },
         { "SetDlgItemEnable", widget_SetDlgItemEnable },
+
         { "Edit_GetText", widget_Edit_GetText },
+        { "Edit_AppendText", widget_Edit_AppendText },
+
+        { "GetDlgItemText", widget_GetDlgItemText },
+        { "SetDlgItemText", widget_SetDlgItemText },
         { "__gc", widget_gc },
         //{ "__tostring", widget_tostring },
         { nullptr, nullptr }
