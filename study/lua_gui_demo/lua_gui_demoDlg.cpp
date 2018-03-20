@@ -23,16 +23,44 @@
 
 namespace
 {
-    void InitConsoleWindow()
+    class ConsoleObject
     {
-        int nCrt = 0;
-        FILE* fp;
-        AllocConsole();
-        nCrt = _open_osfhandle((long)GetStdHandle(STD_OUTPUT_HANDLE), _O_TEXT);
-        fp = _fdopen(nCrt, "w"); //ON_COMMAND; WM_COMMAND
-        *stdout = *fp;
-        setvbuf(stdout, NULL, _IONBF, 0);
-    }
+    public:
+        ConsoleObject()
+            : m_sout(nullptr)
+            , m_serr(nullptr)
+        {
+            int nCrt = 0;
+            FILE* fp;
+            AllocConsole();
+            nCrt = _open_osfhandle((long)GetStdHandle(STD_OUTPUT_HANDLE), _O_TEXT);
+            fp = _fdopen(nCrt, "w"); //ON_COMMAND; WM_COMMAND
+            *stdout = *fp;
+            setvbuf(stdout, NULL, _IONBF, 0);
+
+            /*AllocConsole();
+            errno_t err;
+            err = freopen_s(&m_sout, "CONOUT$", "w", stdout);
+            err = freopen_s(&m_serr, "CONOUT$", "w", stderr);*/
+        }
+
+        ~ConsoleObject()
+        {
+            if (m_sout)
+            {
+                fclose(m_sout);
+            }
+            if (m_serr)
+            {
+                fclose(m_serr);
+            }
+        }
+
+    protected:
+    private:
+        FILE* m_sout;
+        FILE* m_serr;
+    };
 
     enum
     {
@@ -129,7 +157,7 @@ BOOL Clua_gui_demoDlg::OnInitDialog()
 
 	// TODO:  在此添加额外的初始化代码
 
-    //InitConsoleWindow();
+    //console_.reset(new ConsoleObject());
 
     // 第一种方式，将UI的布局配置和消息处理传给lua去处理
     // 宿主负责窗体的创建、绘制，此种方式应当只适用于将逻辑与布局分离而已

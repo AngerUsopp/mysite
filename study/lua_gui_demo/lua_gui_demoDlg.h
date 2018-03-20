@@ -4,9 +4,14 @@
 
 #pragma once
 #include "lua.hpp"
+#include <memory>
 
 class Clua_gui_demoDlgAutoProxy;
 
+namespace
+{
+    class ConsoleObject;
+}
 
 // Clua_gui_demoDlg ¶Ô»°¿ò
 class Clua_gui_demoDlg : public CDialogEx
@@ -45,6 +50,7 @@ protected:
 private:
     BOOL m_bTracking;
     lua_State *m_lua;
+    std::unique_ptr<ConsoleObject> console_;
 
     void ReloadPlugins();
 public:

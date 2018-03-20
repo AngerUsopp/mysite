@@ -36,13 +36,14 @@ end
 
 function main(lua)
     widget = gui_proxy:CreateWidget(lua);
+    print("lua lua lua lua lua");
 
     --ret = widget:DoModal(lua);
     --widget = nil;
     --collectgarbage("collect");
 
     ret = widget:Create();
-
+    
     return ret;
 end
 
