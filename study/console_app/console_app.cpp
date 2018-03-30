@@ -3,21 +3,8 @@
 
 #include "stdafx.h"
 
-
-#include <iostream>           // std::cout
-#include <thread>             // std::thread
-#include <mutex>              // std::mutex, std::unique_lock
-#include <condition_variable> // std::condition_variable
 #include <windows.h>
-#include <conio.h>
 #include <vector>
-
-std::mutex mtx;
-std::condition_variable cv;
-
-//std::recursive_mutex mtx;
-//std::timed_mutex mtx;
-//std::recursive_timed_mutex mtx;
 
 class Pred
 {
@@ -30,7 +17,15 @@ public:
         copy_id_ = 0;
     }
 
-    Pred(const Pred &r)
+    Pred(const Pred &r)/* = delete;*/   // delete表示禁用
+    {
+        static int i = 0;
+        copy_ = true;
+        copy_id_ = r.id_;
+        id_ = --i;
+    }
+
+    Pred(const Pred &&r)
     {
         static int i = 0;
         copy_ = true;
@@ -61,58 +56,6 @@ private:
     bool copy_;
 };
 
-void print_id(int id, const std::string &str, float ff)
-{
-    std::cout << "thread start " << id << " p1=" << str.c_str() << " ff=" << ff << '\n';
-    //mtx.lock();
-    std::unique_lock<std::mutex> lck(mtx);
-    //std::lock_guard<std::mutex> lck(mtx);
-    std::cout << "thread lock " << id << '\n';
-    {
-        Pred p;
-        Sleep(400);
-        std::cout << "thread begin wait " << id << '\n';
-        cv.wait(lck/*, p*/);   // 释放锁的同时阻塞等待信号
-        std::cout << "thread end wait " << id << '\n';
-    }
-    //mtx.unlock();
-    std::cout << "thread exit " << id << '\n';
-}
-
-void go()
-{
-    /*while (_getche() != VK_ESCAPE)
-    {
-        std::unique_lock<std::mutex> lck(mtx);
-        cv.notify_one();
-    }*/
-
-    _getche();
-    std::cout << "notify_all-------------" << '\n';
-    std::unique_lock<std::mutex> lck(mtx);
-    cv.notify_all();
-}
-
-int condition_variable_main()
-{
-    std::thread threads[10];
-    for (int i = 0; i < 10; ++i)
-    {
-        Sleep(100);
-        threads[i] = std::thread(print_id, i, "string_param", i * 1.0f);
-    }
-
-    std::cout << "ten threads ready to race--------------\n";
-    go();
-
-    for (auto& th : threads)
-    {
-        th.join();
-    }
-
-    return 0;
-}
-
 void vector_study()
 {
     std::vector<Pred> vct;
@@ -133,9 +76,16 @@ void vector_study()
     }
 }
 
+void right_ref_study();
+void auto_decltype_study();
+void thread_atomic_study();
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-    condition_variable_main();
+    //vector_study();
+    //right_ref_study();
+    //auto_decltype_study();
+    thread_atomic_study();
     system("pause");
 	return 0;
 }

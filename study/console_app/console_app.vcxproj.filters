@@ -32,5 +32,14 @@
     <ClCompile Include="console_app.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="right_value_ref.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="auto_decltype.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="func_thread_weakptr_atomic.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
