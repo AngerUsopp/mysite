@@ -17,6 +17,175 @@
 // https://www.cnblogs.com/qicosmos/p/4325949.html 可变模版参数
 namespace
 {
+    template<size_t N>
+    struct InvokeHelper
+    {
+        template<typename Function, typename Tuple, typename... Args>
+        static inline auto Invoke(Function&& func, Tuple&& tpl, Args &&... args)
+            -> decltype(InvokeHelper<N - 1>::Invoke(
+            std::forward<Function>(func),
+            std::forward<Tuple>(tpl),
+            std::get<N - 1>(std::forward<Tuple>(tpl)),
+            std::forward<Args>(args)...
+            ))
+        {
+            return InvokeHelper<N - 1>::Invoke(
+                std::forward<Function>(func),
+                std::forward<Tuple>(tpl),
+                std::get<N - 1>(std::forward<Tuple>(tpl)),
+                std::forward<Args>(args)...
+                );
+        }
+
+        template<typename Function, typename T, typename Tuple, typename... Args>
+        static inline auto InvokeWeak(Function&& func, T* obj, Tuple&& tpl, Args &&... args)
+            -> decltype(InvokeHelper<N - 1>::InvokeWeak(
+            std::forward<Function>(func),
+            obj,
+            std::forward<Tuple>(tpl),
+            std::get<N - 1>(std::forward<Tuple>(tpl)),
+            std::forward<Args>(args)...
+            ))
+        {
+            return InvokeHelper<N - 1>::InvokeWeak(
+                std::forward<Function>(func),
+                obj,
+                std::forward<Tuple>(tpl),
+                std::get<N - 1>(std::forward<Tuple>(tpl)),
+                std::forward<Args>(args)...
+                );
+        }
+    };
+
+    template<>
+    struct InvokeHelper<0>
+    {
+        template<typename Function, typename Tuple, typename... Args>
+        static inline auto Invoke(Function &&func, Tuple&&, Args &&... args)
+            -> decltype(std::forward<Function>(func)(std::forward<Args>(args)...))
+        {
+            return std::forward<Function>(func)(std::forward<Args>(args)...);
+        }
+
+        template<typename Function, typename T, typename Tuple, typename... Args>
+        static inline auto InvokeWeak(Function &&func, T* obj, Tuple&&, Args &&... args)
+            -> decltype((obj->*(std::forward<Function>(func)))(std::forward<Args>(args)...))
+        {
+            return (obj->*(std::forward<Function>(func)))(std::forward<Args>(args)...);
+        }
+    };
+
+    template<typename Function, typename Tuple>
+    inline auto Invoke(Function&& func, Tuple&& tpl)
+        -> decltype(InvokeHelper<std::tuple_size<typename std::decay<Tuple>::type>::value>::
+        Invoke(std::forward<Function>(func), std::forward<Tuple>(tpl)))
+    {
+        return InvokeHelper<std::tuple_size<typename std::decay<Tuple>::type>::value>::
+            Invoke(std::forward<Function>(func), std::forward<Tuple>(tpl));
+    }
+
+    template<typename Function, typename T, typename Tuple>
+    inline auto InvokeWeak(Function&& func, T* obj, Tuple&& tpl)
+        -> decltype(InvokeHelper<std::tuple_size<typename std::decay<Tuple>::type>::value>::
+        InvokeWeak(std::forward<Function>(func), obj, std::forward<Tuple>(tpl)))
+    {
+        return InvokeHelper<std::tuple_size<typename std::decay<Tuple>::type>::value>::
+            InvokeWeak(std::forward<Function>(func), obj, std::forward<Tuple>(tpl));
+    }
+
+    template<size_t N>
+    struct Apply
+    {
+        template<typename Function, typename Tuple, typename... Args>
+        static inline auto apply(Function&& func, Tuple&& tpl, Args &&... args)
+            -> decltype(
+            Apply<N - 1>::apply(
+            std::forward<Function>(func), 
+            std::forward<Tuple>(tpl),
+            std::get<N - 1>(std::forward<Tuple>(tpl)),
+            std::forward<Args>(args)...
+            ))
+        {
+            return Apply<N - 1>::apply(
+                std::forward<Function>(func),
+                std::forward<Tuple>(tpl),
+                std::get<N - 1>(std::forward<Tuple>(tpl)),
+                std::forward<Args>(args)...
+                );
+        }
+    };
+
+    template<>
+    struct Apply<0>
+    {
+        template<typename Function, typename Tuple, typename... Args>
+        static inline auto apply(Function &&func, Tuple&&, Args &&... args)
+            -> decltype(std::forward<Function>(func)(std::forward<Args>(args)...))
+        {
+            return std::forward<Function>(func)(std::forward<Args>(args)...);
+        }
+    };
+
+    template<typename Function, typename Tuple>
+    inline auto apply(Function&& func, Tuple&& tpl)
+        -> decltype(Apply<std::tuple_size<typename std::decay<Tuple>::type>::value>::
+        apply(std::forward<Function>(func), std::forward<Tuple>(tpl)))
+    {
+        return Apply<std::tuple_size<typename std::decay<Tuple>::type>::value>::
+            apply(std::forward<Function>(func), std::forward<Tuple>(tpl));
+    }
+
+
+    template<size_t N>
+    struct MemberApply
+    {
+        template<typename Function, typename T, typename Tuple, typename... Args>
+        static inline auto apply(Function&& func, T* obj, Tuple&& tpl, Args &&... args)
+            -> decltype(MemberApply<N - 1>::apply(
+            std::forward<Function>(func),
+            obj,
+            std::forward<Tuple>(tpl),
+            std::get<N - 1>(std::forward<Tuple>(tpl)),
+            std::forward<Args>(args)...
+            ))
+        {
+            return MemberApply<N - 1>::apply(
+                std::forward<Function>(func),
+                obj,
+                std::forward<Tuple>(tpl),
+                std::get<N - 1>(std::forward<Tuple>(tpl)),
+                std::forward<Args>(args)...
+                );
+        }
+    };
+
+    template<>
+    struct MemberApply<0>
+    {
+        template<typename Function, typename T, typename Tuple, typename... Args>
+        static inline auto apply(Function &&func, T* obj, Tuple&&, Args &&... args)
+            -> decltype((obj->*(std::forward<Function>(func)))(std::forward<Args>(args)...))
+        {
+            return (obj->*(std::forward<Function>(func)))(std::forward<Args>(args)...);
+        }
+    };
+
+    template<typename Function, typename T, typename Tuple>
+    inline auto member_apply(Function&& func, T* obj, Tuple&& tpl)
+        -> decltype(MemberApply<std::tuple_size<typename std::decay<Tuple>::type>::value>::
+        apply(std::forward<Function>(func), obj, std::forward<Tuple>(tpl)))
+    {
+        return MemberApply<std::tuple_size<typename std::decay<Tuple>::type>::value>::
+            apply(std::forward<Function>(func), obj, std::forward<Tuple>(tpl));
+    }
+
+
+    int print_int(int name)
+    {
+        printf("print_int : %d\n", name);
+        return 10086;
+    }
+
     void print_func(const char *name)
     {
         std::ostringstream text;
@@ -24,55 +193,121 @@ namespace
         printf("thread: %s, func: %s \n", text.str().c_str(), name);
     }
 
+    class ClosureBase
+    {
+    public:
+        virtual ~ClosureBase() = default;
+        virtual void Run() = 0;
+    };
+
+    // callback
     class CallbackBase
     {
     public:
         virtual ~CallbackBase() = default;
         virtual void Run() = 0;
-    protected:
-    private:
     };
 
-    template<typename T, typename R, typename... Args>
-    class Callback : public CallbackBase
+    template<bool IsMemberFunc, typename ReturnType, typename T, typename... Args>
+    class Callback;
+
+    template<typename ReturnType, typename... Args>
+    class Callback<false, ReturnType, void, Args...> : public CallbackBase
     {
     public:
-        Callback(R(T::*func)(Args...), std::weak_ptr<T> &weakptr, Args&&... _Args)
+        Callback(ReturnType(*func)(Args...), Args&&... args)
             : func_(func)
-            , weakptr_(weakptr)
-            , _Mybargs(std::forward<Args>(_Args)...)
+            , _Mybargs(std::forward<Args>(args)...)
         {
         }
 
         virtual void Run() override
+        {
+            RunWithResult();
+        }
+
+        ReturnType RunWithResult()
+        {
+            if (func_)
+            {
+                return apply(func_, _Mybargs);
+            }
+            return ReturnType();
+        }
+
+    private:
+        //typedef typename std::decay<_Fun>::type _Funx;
+        typedef std::tuple<typename std::decay<Args>::type...> _Bargs;
+
+        ReturnType(*func_)(Args...);
+        _Bargs _Mybargs;	// the bound arguments
+    };
+
+    template<typename ReturnType, typename T, typename... Args>
+    class Callback<true, ReturnType, T, Args...> : public CallbackBase
+    {
+        //typedef typename std::decay<_Fun>::type _Funx;
+        typedef std::tuple<typename std::decay<Args>::type...> _Bargs;
+
+    public:
+        Callback(ReturnType(T::*func)(Args...), std::weak_ptr<T> &weakptr, Args&&... args)
+            : func_(func)
+            , weakptr_(weakptr)
+            , _Mybargs(std::forward<Args>(args)...)
+        {
+        }
+
+        virtual void Run() override
+        {
+            RunWithResult();
+        }
+
+        ReturnType RunWithResult()
         {
             std::shared_ptr<T> ptr = weakptr_.lock();
             if (ptr)
             {
                 if (func_)
                 {
-                    (ptr->*func_)(_Mybargs);
+                    //member_apply(&WeakptrTest::print_param, tobj.get(), std::move(std::make_tuple(20108)));
+                    member_apply(func_, ptr.get(), _Mybargs);
                 }
             }
             else
             {
                 printf("obj deleted\n");
             }
+            return ReturnType();
         }
 
-    protected:
     private:
+
         std::weak_ptr<T> weakptr_;
-        R(T::*func_)(Args...);
-
-        typedef typename std::decay<_Fun>::type _Funx;
-        typedef std::tuple<typename std::decay<Args>::type...> _Bargs;
-
+        ReturnType(T::*func_)(Args...);
         _Bargs _Mybargs;	// the bound arguments
     };
 
+    // bind
+    template <class ReturnType, typename... Args>
+    Callback<false, ReturnType, void, Args...> Bind(ReturnType(*func)(Args...), Args&&... args)
+    {
+        return Callback<false, ReturnType, void, Args...>(
+            func, 
+            std::forward<Args>(args)...);
+    }
+
+    template <class ReturnType, typename T, typename... Args>
+    Callback<true, ReturnType, T, Args...> Bind(ReturnType(T::*func)(Args...), std::weak_ptr<T> &weakptr, Args&&... args)
+    {
+        return Callback<true, ReturnType, T, Args...>(
+            func,
+            weakptr,
+            std::forward<Args>(args)...);
+    }
+
+
     template<typename T>
-    class Closure : public CallbackBase
+    class Closure : public ClosureBase
     {
     public:
         explicit Closure(std::weak_ptr<T> weakptr, std::function<void(void)> func)
@@ -138,7 +373,7 @@ namespace
         template<typename T>
         void PostTask(Closure<T> &&closure)
         {
-            std::shared_ptr<CallbackBase> ptr(new Closure<T>(std::move(closure)));
+            std::shared_ptr<ClosureBase> ptr(new Closure<T>(std::move(closure)));
             std::unique_lock<std::mutex> lock(task_mutex);
             task_list.push(ptr);
 
@@ -194,7 +429,7 @@ namespace
 
                 if (keep_working_)
                 {
-                    std::shared_ptr<CallbackBase> task;
+                    std::shared_ptr<ClosureBase> task;
                     {
                         std::unique_lock<std::mutex> lock(task_mutex);
                         if (!task_list.empty())
@@ -215,7 +450,7 @@ namespace
         std::shared_ptr<std::thread> thread_;
         std::mutex task_mutex;
         std::condition_variable cv_;
-        std::queue<std::shared_ptr<CallbackBase>> task_list;
+        std::queue<std::shared_ptr<ClosureBase>> task_list;
         bool keep_working_ = true;
     };
 
@@ -230,15 +465,9 @@ namespace
         }
     }
 
-    template<typename T, typename ..._Types>
-    Closure Bind(_Types... _Args)
-    {
-
-    }
-
     void AsyncCall(std::function<void(void)> func)
     {
-        print_func("AsyncCall");
+        //print_func("AsyncCall");
 
         func();
     }
@@ -254,6 +483,12 @@ namespace
         void print_id()
         {
             print_func("weakptr_print");
+        }
+
+        int print_param(int i)
+        {
+            std::cout << "print_param : " << i << std::endl;
+            return 10011;
         }
 
     protected:
@@ -275,9 +510,21 @@ namespace
     };
 }
 
+
 void thread_atomic_study()
 {
-    g_thread_map[0] = std::shared_ptr<CThread>(new CThread());
+    auto cb = Bind(print_int, 10010);
+    cb.Run();
+    auto ret = cb.RunWithResult();
+    Invoke(print_int, std::make_tuple(10011));
+
+    std::shared_ptr<WeakptrTest> tobj(new WeakptrTest());
+    auto cbw = Bind(&WeakptrTest::print_param, std::weak_ptr<WeakptrTest>(tobj), 2018);
+    InvokeWeak(&WeakptrTest::print_param, tobj.get(), std::make_tuple(2019));
+    cbw.Run();
+    auto retw = cbw.RunWithResult();
+
+    /*g_thread_map[0] = std::shared_ptr<CThread>(new CThread());
     g_thread_map[1] = std::shared_ptr<CThread>(new CThread());
     g_thread_map[2] = std::shared_ptr<CThread>(new CThread());
     for (auto &thd : g_thread_map)
@@ -311,5 +558,5 @@ void thread_atomic_study()
     {
         thd.second->StopSoon();
     }
-    g_thread_map.clear();
+    g_thread_map.clear();*/
 }

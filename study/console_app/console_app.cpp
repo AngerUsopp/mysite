@@ -5,6 +5,7 @@
 
 #include <windows.h>
 #include <vector>
+#include <iostream>
 
 class Pred
 {
@@ -79,12 +80,15 @@ void vector_study()
 void right_ref_study();
 void auto_decltype_study();
 void thread_atomic_study();
+void variadic_templates_example();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+    std::cout << std::boolalpha;
     //vector_study();
     //right_ref_study();
     //auto_decltype_study();
+    //variadic_templates_example();
     thread_atomic_study();
     system("pause");
 	return 0;

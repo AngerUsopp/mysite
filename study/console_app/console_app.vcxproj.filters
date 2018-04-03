@@ -41,5 +41,8 @@
     <ClCompile Include="func_thread_weakptr_atomic.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="variadic_templates_example.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
