@@ -13,10 +13,49 @@
 #include <queue>
 #include <map>
 
+#include <stdio.h>
+#include <stdlib.h>
+
 
 // https://www.cnblogs.com/qicosmos/p/4325949.html 可变模版参数
 namespace
 {
+    void print_func(const char *name)
+    {
+        /*std::ostringstream text;
+        std::this_thread::get_id()._To_text(text);*/
+        std::cout << "thread: " << std::this_thread::get_id() 
+            << " \t msg: " << name << std::endl;
+    }
+
+    std::string StringPrintf(const char* format, ...)
+    {
+        std::string str;
+
+        va_list  args;
+        int      len;
+        char     *buffer = NULL;
+
+        va_start(args, format);
+
+        // _vscprintf doesn't count the 
+        // null terminating string so we add 1.
+        len = _vscprintf_p(format, args) + 1;
+
+        // Allocate memory for our buffer
+        buffer = (char*)malloc(len * sizeof(char));
+        if (buffer)
+        {
+            _vsprintf_p(buffer, len, format, args);
+            str = buffer;
+            free(buffer);
+        }
+        va_end(args);
+
+        return str;
+    }
+
+    // invoker
     template<size_t N>
     struct InvokeHelper
     {
@@ -38,8 +77,8 @@ namespace
         }
 
         template<typename Function, typename T, typename Tuple, typename... Args>
-        static inline auto InvokeWeak(Function&& func, T* obj, Tuple&& tpl, Args &&... args)
-            -> decltype(InvokeHelper<N - 1>::InvokeWeak(
+        static inline auto Invoke(Function&& func, T* obj, Tuple&& tpl, Args &&... args)
+            -> decltype(InvokeHelper<N - 1>::Invoke(
             std::forward<Function>(func),
             obj,
             std::forward<Tuple>(tpl),
@@ -47,7 +86,7 @@ namespace
             std::forward<Args>(args)...
             ))
         {
-            return InvokeHelper<N - 1>::InvokeWeak(
+            return InvokeHelper<N - 1>::Invoke(
                 std::forward<Function>(func),
                 obj,
                 std::forward<Tuple>(tpl),
@@ -68,7 +107,7 @@ namespace
         }
 
         template<typename Function, typename T, typename Tuple, typename... Args>
-        static inline auto InvokeWeak(Function &&func, T* obj, Tuple&&, Args &&... args)
+        static inline auto Invoke(Function &&func, T* obj, Tuple&&, Args &&... args)
             -> decltype((obj->*(std::forward<Function>(func)))(std::forward<Args>(args)...))
         {
             return (obj->*(std::forward<Function>(func)))(std::forward<Args>(args)...);
@@ -76,7 +115,7 @@ namespace
     };
 
     template<typename Function, typename Tuple>
-    inline auto Invoke(Function&& func, Tuple&& tpl)
+    auto Invoke(Function&& func, Tuple&& tpl)
         -> decltype(InvokeHelper<std::tuple_size<typename std::decay<Tuple>::type>::value>::
         Invoke(std::forward<Function>(func), std::forward<Tuple>(tpl)))
     {
@@ -85,127 +124,29 @@ namespace
     }
 
     template<typename Function, typename T, typename Tuple>
-    inline auto InvokeWeak(Function&& func, T* obj, Tuple&& tpl)
+    auto Invoke(Function&& func, T* obj, Tuple&& tpl)
         -> decltype(InvokeHelper<std::tuple_size<typename std::decay<Tuple>::type>::value>::
-        InvokeWeak(std::forward<Function>(func), obj, std::forward<Tuple>(tpl)))
+        Invoke(std::forward<Function>(func), obj, std::forward<Tuple>(tpl)))
     {
         return InvokeHelper<std::tuple_size<typename std::decay<Tuple>::type>::value>::
-            InvokeWeak(std::forward<Function>(func), obj, std::forward<Tuple>(tpl));
+            Invoke(std::forward<Function>(func), obj, std::forward<Tuple>(tpl));
     }
-
-    template<size_t N>
-    struct Apply
-    {
-        template<typename Function, typename Tuple, typename... Args>
-        static inline auto apply(Function&& func, Tuple&& tpl, Args &&... args)
-            -> decltype(
-            Apply<N - 1>::apply(
-            std::forward<Function>(func), 
-            std::forward<Tuple>(tpl),
-            std::get<N - 1>(std::forward<Tuple>(tpl)),
-            std::forward<Args>(args)...
-            ))
-        {
-            return Apply<N - 1>::apply(
-                std::forward<Function>(func),
-                std::forward<Tuple>(tpl),
-                std::get<N - 1>(std::forward<Tuple>(tpl)),
-                std::forward<Args>(args)...
-                );
-        }
-    };
-
-    template<>
-    struct Apply<0>
-    {
-        template<typename Function, typename Tuple, typename... Args>
-        static inline auto apply(Function &&func, Tuple&&, Args &&... args)
-            -> decltype(std::forward<Function>(func)(std::forward<Args>(args)...))
-        {
-            return std::forward<Function>(func)(std::forward<Args>(args)...);
-        }
-    };
-
-    template<typename Function, typename Tuple>
-    inline auto apply(Function&& func, Tuple&& tpl)
-        -> decltype(Apply<std::tuple_size<typename std::decay<Tuple>::type>::value>::
-        apply(std::forward<Function>(func), std::forward<Tuple>(tpl)))
-    {
-        return Apply<std::tuple_size<typename std::decay<Tuple>::type>::value>::
-            apply(std::forward<Function>(func), std::forward<Tuple>(tpl));
-    }
-
-
-    template<size_t N>
-    struct MemberApply
-    {
-        template<typename Function, typename T, typename Tuple, typename... Args>
-        static inline auto apply(Function&& func, T* obj, Tuple&& tpl, Args &&... args)
-            -> decltype(MemberApply<N - 1>::apply(
-            std::forward<Function>(func),
-            obj,
-            std::forward<Tuple>(tpl),
-            std::get<N - 1>(std::forward<Tuple>(tpl)),
-            std::forward<Args>(args)...
-            ))
-        {
-            return MemberApply<N - 1>::apply(
-                std::forward<Function>(func),
-                obj,
-                std::forward<Tuple>(tpl),
-                std::get<N - 1>(std::forward<Tuple>(tpl)),
-                std::forward<Args>(args)...
-                );
-        }
-    };
-
-    template<>
-    struct MemberApply<0>
-    {
-        template<typename Function, typename T, typename Tuple, typename... Args>
-        static inline auto apply(Function &&func, T* obj, Tuple&&, Args &&... args)
-            -> decltype((obj->*(std::forward<Function>(func)))(std::forward<Args>(args)...))
-        {
-            return (obj->*(std::forward<Function>(func)))(std::forward<Args>(args)...);
-        }
-    };
-
-    template<typename Function, typename T, typename Tuple>
-    inline auto member_apply(Function&& func, T* obj, Tuple&& tpl)
-        -> decltype(MemberApply<std::tuple_size<typename std::decay<Tuple>::type>::value>::
-        apply(std::forward<Function>(func), obj, std::forward<Tuple>(tpl)))
-    {
-        return MemberApply<std::tuple_size<typename std::decay<Tuple>::type>::value>::
-            apply(std::forward<Function>(func), obj, std::forward<Tuple>(tpl));
-    }
-
-
-    int print_int(int name)
-    {
-        printf("print_int : %d\n", name);
-        return 10086;
-    }
-
-    void print_func(const char *name)
-    {
-        std::ostringstream text;
-        std::this_thread::get_id()._To_text(text);
-        printf("thread: %s, func: %s \n", text.str().c_str(), name);
-    }
-
-    class ClosureBase
-    {
-    public:
-        virtual ~ClosureBase() = default;
-        virtual void Run() = 0;
-    };
 
     // callback
     class CallbackBase
     {
     public:
+        CallbackBase()
+        {
+            post_thread_id_ = std::this_thread::get_id();
+        }
         virtual ~CallbackBase() = default;
         virtual void Run() = 0;
+
+        std::thread::id get_post_thread_id() { return post_thread_id_; }
+
+    protected:
+        std::thread::id post_thread_id_;
     };
 
     template<bool IsMemberFunc, typename ReturnType, typename T, typename... Args>
@@ -228,11 +169,7 @@ namespace
 
         ReturnType RunWithResult()
         {
-            if (func_)
-            {
-                return apply(func_, _Mybargs);
-            }
-            return ReturnType();
+            return Invoke(func_, _Mybargs);
         }
 
     private:
@@ -247,6 +184,7 @@ namespace
     class Callback<true, ReturnType, T, Args...> : public CallbackBase
     {
         //typedef typename std::decay<_Fun>::type _Funx;
+        //using _ArgsType = typename std::decay<Args>::type...;
         typedef std::tuple<typename std::decay<Args>::type...> _Bargs;
 
     public:
@@ -262,42 +200,56 @@ namespace
             RunWithResult();
         }
 
+        template<typename ParamType>
+        void RunWithParam(ParamType *result)
+        {
+            std::shared_ptr<T> ptr = weakptr_.lock();
+            if (!ptr)
+            {
+                print_func("obj deleted");
+                return;
+            }
+
+            if (std::tuple_size<_Bargs>::value)
+            {
+                using fstType = std::tuple_element<0, _Bargs>::type;
+                std::get<0>(_Mybargs) = std::move(*((fstType*)result));
+            }
+            
+            Invoke(func_, ptr.get(), _Mybargs);
+        }
+
         ReturnType RunWithResult()
         {
             std::shared_ptr<T> ptr = weakptr_.lock();
-            if (ptr)
+            if (!ptr)
             {
-                if (func_)
-                {
-                    //member_apply(&WeakptrTest::print_param, tobj.get(), std::move(std::make_tuple(20108)));
-                    member_apply(func_, ptr.get(), _Mybargs);
-                }
+                print_func("obj deleted");
+                return ReturnType();
             }
-            else
-            {
-                printf("obj deleted\n");
-            }
-            return ReturnType();
+
+            return Invoke(func_, ptr.get(), _Mybargs);
         }
 
     private:
-
         std::weak_ptr<T> weakptr_;
         ReturnType(T::*func_)(Args...);
         _Bargs _Mybargs;	// the bound arguments
     };
 
     // bind
-    template <class ReturnType, typename... Args>
-    Callback<false, ReturnType, void, Args...> Bind(ReturnType(*func)(Args...), Args&&... args)
+    template <typename ReturnType, typename... Args>
+    Callback<false, ReturnType, void, Args...> 
+        Bind(ReturnType(*func)(Args...), Args... args)
     {
         return Callback<false, ReturnType, void, Args...>(
             func, 
             std::forward<Args>(args)...);
     }
 
-    template <class ReturnType, typename T, typename... Args>
-    Callback<true, ReturnType, T, Args...> Bind(ReturnType(T::*func)(Args...), std::weak_ptr<T> &weakptr, Args&&... args)
+    template <typename ReturnType, typename T, typename... Args>
+    Callback<true, ReturnType, T, Args...> 
+        Bind(ReturnType(T::*func)(Args...), std::weak_ptr<T> &weakptr, Args... args)
     {
         return Callback<true, ReturnType, T, Args...>(
             func,
@@ -305,58 +257,192 @@ namespace
             std::forward<Args>(args)...);
     }
 
+    // posttask
+    template <typename ReturnType, typename... Args>
+    void PostTask(int tid, Callback<false, ReturnType, void, Args...>&& closure)
+    {
+        if (g_thread_map.find(tid) != g_thread_map.end())
+        {
+            g_thread_map[tid]->PostTask(std::move(closure));
+        }
+    }
 
-    template<typename T>
-    class Closure : public ClosureBase
+    template <typename ReturnType, typename T, typename... Args>
+    void PostTask(int tid, Callback<true, ReturnType, T, Args...> &&closure)
+    {
+        if (g_thread_map.find(tid) != g_thread_map.end())
+        {
+            g_thread_map[tid]->PostTask(std::move(closure));
+        }
+    }
+
+
+    template <typename RReturnType, typename RT, typename... RArgs, typename TaskReturnType>
+    void ReplyAdapter(
+        std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply, 
+        TaskReturnType *result
+        )
+    {
+        reply->RunWithParam(result);
+        delete result;
+    }
+
+    template <typename TReturnType, typename TT, typename... TArgs, 
+        typename RReturnType, typename RT, typename... RArgs>
+    void ReturnAsParamAdapter(
+        std::shared_ptr<Callback<true, TReturnType, TT, TArgs...>> task,
+        std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
+        )
+    {
+        std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
+        if (thd)
+        {
+            using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
+
+            if (!std::is_same<typename std::decay<TReturnType>::type, void>::value)
+            {
+                TReturnType *result = new TReturnType(task->RunWithResult());
+                thd->PostTask(Bind<void, std::shared_ptr<rtype>, TReturnType*>(
+                    ReplyAdapter,
+                    reply,
+                    result)
+                    );
+            }
+        }
+    }
+
+
+    /*template <typename RReturnType, typename RT, typename... RArgs>
+    void ReplyAdapter(
+        std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
+        )
+    {
+        reply->Run();
+    }
+
+    template <typename TReturnType = void, typename TT, typename... TArgs,
+        typename RReturnType, typename RT, typename... RArgs>
+        void ReturnAsParamAdapter<void>(
+        std::shared_ptr<Callback<true, TReturnType, TT, TArgs...>> task,
+        std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
+        )
+    {
+        std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
+        if (thd)
+        {
+            using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
+
+            task->Run();
+
+            thd->PostTask(Bind<void, std::shared_ptr<rtype>>(
+                ReplyAdapter,
+                reply)
+                );
+        }
+    }*/
+
+    template <typename TReturnType, typename TT, typename... TArgs, 
+        typename RReturnType, typename RT, typename... RArgs>
+    void PostTaskAndReplyWithResult(int tid, 
+        Callback<true, TReturnType, TT, TArgs...> &&task, 
+        Callback<true, RReturnType, RT, RArgs...> &&reply)
+    {
+        if (g_thread_map.find(tid) != g_thread_map.end())
+        {
+            using ttype = std::decay<Callback<true, TReturnType, TT, TArgs...>>::type;
+            using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
+
+            g_thread_map[tid]->PostTask(Bind<void, std::shared_ptr<ttype>, std::shared_ptr<rtype>>(
+                ReturnAsParamAdapter,
+                std::shared_ptr<ttype>(new ttype(task)),
+                std::shared_ptr<rtype>(new rtype(reply)))
+                );
+        }
+    }
+
+    // weak_ptr
+    template <typename T>
+    std::weak_ptr<T> GetWeakPtr(T* ptr)
+    {
+        return GetWeakPtr(std::shared_ptr<T>(ptr));
+    }
+
+    template <typename T>
+    std::weak_ptr<T> GetWeakPtr(std::shared_ptr<T>& ptr)
+    {
+        return std::weak_ptr<T>(ptr);
+    }
+
+    // semphore
+    class semphore
     {
     public:
-        explicit Closure(std::weak_ptr<T> weakptr, std::function<void(void)> func)
-            : weakptr_(weakptr)
-            , func_(func)
+        semphore(long inti_value = 0)
+            : count_(inti_value)
         {
+            work_ = true;
         }
 
-        Closure(Closure &&right)
+        virtual ~semphore()
         {
-            *this = std::move(right);
+            stop();
         }
 
-        Closure& operator=(Closure &&right)
+        bool wait()
         {
-            if (this != &right)
+            std::unique_lock<std::mutex> lock(mutex_);
+            if (count_ <= 0)
             {
-                weakptr_ = right.weakptr_;
-                func_ = right.func_;
+                condition_var_.wait(lock);
             }
 
-            return *this;
-        }
-
-        virtual void Run() override
-        {
-            std::shared_ptr<T> ptr = weakptr_.lock();
-            if (ptr)
+            if (work_)
             {
-                if (!func_._Empty())
+                --count_;
+                if (count_ < 0)
                 {
-                    func_();
+                    assert(false);
                 }
             }
-            else
-            {
-                printf("obj deleted\n");
-            }
+
+            return work_;
         }
 
-    protected:
+        void signal()
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+            count_++;
+            condition_var_.notify_one();
+        }
+
+        void stop()
+        {
+            work_ = false;
+            std::unique_lock<std::mutex> lock(mutex_);
+            condition_var_.notify_all();
+        }
+
     private:
-        std::weak_ptr<T> weakptr_;
-        std::function<void(void)> func_;
+        std::atomic_bool work_;
+        std::atomic<long> count_;
+        std::mutex mutex_;
+        std::condition_variable condition_var_;
     };
 
+    // thread
     class CThread : public std::enable_shared_from_this<CThread>
     {
     public:
+        static std::shared_ptr<CThread> GetThread(const std::thread::id &id)
+        {
+            std::lock_guard<std::mutex> lock(thread_map_mutex_);
+            if (thread_map_.find(id) != thread_map_.end())
+            {
+                return thread_map_[id];
+            }
+            return std::shared_ptr<CThread>();
+        }
+
         CThread()
         {
         }
@@ -370,31 +456,51 @@ namespace
 
         CThread& operator=(CThread &right) = delete;
 
-        template<typename T>
-        void PostTask(Closure<T> &&closure)
+        template <class ReturnType, typename... Args>
+        void PostTask(Callback<false, ReturnType, void, Args...> &&closure)
         {
-            std::shared_ptr<ClosureBase> ptr(new Closure<T>(std::move(closure)));
-            std::unique_lock<std::mutex> lock(task_mutex);
-            task_list.push(ptr);
+            if (!thread_)
+            {
+                assert(false);
+                return;
+            }
 
-            cv_.notify_one();
+            PostBaseTask(std::shared_ptr<CallbackBase>(new Callback<false, ReturnType, void, Args...>(std::move(closure))));
+        }
+
+        template <class ReturnType, typename T, typename... Args>
+        void PostTask(Callback<true, ReturnType, T, Args...> &&closure)
+        {
+            if (!thread_)
+            {
+                assert(false);
+                return;
+            }
+
+            PostBaseTask(std::shared_ptr<CallbackBase>(new Callback<true, ReturnType, T, Args...>(std::move(closure))));
         }
 
         void Run()
         {
+            assert(!thread_);
+
+            keep_working_ = true;
             thread_.reset(new std::thread(&CThread::ThreadFunc, std::weak_ptr<CThread>(shared_from_this())));
+            id_ = thread_->get_id();
+
+            std::lock_guard<std::mutex> lock(thread_map_mutex_);
+            thread_map_[id_] = shared_from_this();
         }
 
         void Stop()
         {
             keep_working_ = false;
-            std::unique_lock<std::mutex> lock(task_mutex);
-            cv_.notify_one();
+            semphore_.stop();
         }
 
         void Join()
         {
-            if (thread_->joinable())
+            if (thread_ && thread_->joinable())
             {
                 thread_->join();
             }
@@ -404,9 +510,19 @@ namespace
         {
             Stop();
             Join();
+            thread_.reset();
         }
 
     protected:
+        void PostBaseTask(std::shared_ptr<CallbackBase> &task)
+        {
+            {
+                std::unique_lock<std::mutex> lock(task_mutex_);
+                task_list.push(task);
+            }
+
+            semphore_.signal();
+        }
 
     private:
         static void ThreadFunc(std::weak_ptr<CThread> weakptr)
@@ -420,57 +536,43 @@ namespace
 
         void _ThreadFunc()
         {
-            while (keep_working_)
+            while (keep_working_ && semphore_.wait())
             {
+                std::shared_ptr<CallbackBase> task;
                 {
-                    std::unique_lock<std::mutex> lock(task_mutex);
-                    cv_.wait(lock);
+                    std::unique_lock<std::mutex> lock(task_mutex_);
+                    if (!task_list.empty())
+                    {
+                        task = task_list.front();
+                        task_list.pop();
+                    }
                 }
-
-                if (keep_working_)
+                if (task)
                 {
-                    std::shared_ptr<ClosureBase> task;
-                    {
-                        std::unique_lock<std::mutex> lock(task_mutex);
-                        if (!task_list.empty())
-                        {
-                            task = task_list.front();
-                            task_list.pop();
-                        }
-                    }
-                    if (task)
-                    {
-                        task->Run();
-                    }
+                    task->Run();
                 }
             }
+
+            std::lock_guard<std::mutex> lock(thread_map_mutex_);
+            thread_map_.erase(id_);
         }
 
     private:
         std::shared_ptr<std::thread> thread_;
-        std::mutex task_mutex;
-        std::condition_variable cv_;
-        std::queue<std::shared_ptr<ClosureBase>> task_list;
+        std::thread::id id_;
+        semphore semphore_;
+        std::mutex task_mutex_;
+        std::queue<std::shared_ptr<CallbackBase>> task_list;
         bool keep_working_ = true;
+
+        static std::mutex thread_map_mutex_;
+        static std::map<std::thread::id, std::shared_ptr<CThread>> thread_map_;
     };
+    std::mutex CThread::thread_map_mutex_;
+    std::map<std::thread::id, std::shared_ptr<CThread>> CThread::thread_map_;
 
+    // test
     std::map<int, std::shared_ptr<CThread>> g_thread_map;
-
-    template<typename T>
-    void PostTask(int tid, Closure<T> &&closure)
-    {
-        if (g_thread_map.find(tid) != g_thread_map.end())
-        {
-            g_thread_map[tid]->PostTask(std::move(closure));
-        }
-    }
-
-    void AsyncCall(std::function<void(void)> func)
-    {
-        //print_func("AsyncCall");
-
-        func();
-    }
 
     class WeakptrTest : public std::enable_shared_from_this<WeakptrTest>
     {
@@ -480,51 +582,57 @@ namespace
         {
         }
 
-        void print_id()
+        void print_void()
         {
-            print_func("weakptr_print");
+            print_func("print_void");
         }
 
         int print_param(int i)
         {
-            std::cout << "print_param : " << i << std::endl;
-            return 10011;
+            print_func(StringPrintf("print_param: %d", i).c_str());
+            return i;
         }
 
-    protected:
-        void OnAsyncCompleted()
+        void on_print_param(int ret)
         {
-            std::shared_ptr<WeakptrTest> ptr = shared_from_this();
-            if (ptr)
-            {
-                print_func("OnAsyncCompleted");
-            }
-            else
-            {
-                print_func("OnAsyncCompleted deleted");
-            }
+            print_func(StringPrintf("on_print_param: %d", ret).c_str());
+        }
+
+        void post_task_and_reply(int index)
+        {
+            print_func("post_task_and_reply");
+
+            int i = 2 - index;
+            i = (i == index) ? 0 : i;
+            /*PostTaskAndReplyWithResult(i,
+                Bind(&WeakptrTest::print_param, GetWeakPtr(shared_from_this()), index),
+                Bind(&WeakptrTest::on_print_param, GetWeakPtr(shared_from_this()), 0));*/
+            PostTaskAndReplyWithResult(i,
+                Bind(&WeakptrTest::print_void, GetWeakPtr(shared_from_this())),
+                Bind(&WeakptrTest::on_print_param, GetWeakPtr(shared_from_this()), -1234));
         }
 
     private:
-        std::atomic<long> prt_id_ = 0;
+        int id_ = 0;
     };
 }
 
 
 void thread_atomic_study()
 {
-    auto cb = Bind(print_int, 10010);
+    /*int intpram = 111;
+    auto cb = Bind(print_func, "thread_atomic_study");
     cb.Run();
     auto ret = cb.RunWithResult();
-    Invoke(print_int, std::make_tuple(10011));
+    Invoke(print_func, std::make_tuple("thread_atomic_study"));*/
 
-    std::shared_ptr<WeakptrTest> tobj(new WeakptrTest());
-    auto cbw = Bind(&WeakptrTest::print_param, std::weak_ptr<WeakptrTest>(tobj), 2018);
-    InvokeWeak(&WeakptrTest::print_param, tobj.get(), std::make_tuple(2019));
+    /*std::shared_ptr<WeakptrTest> tobj(new WeakptrTest());
+    auto cbw = Bind(&WeakptrTest::print_param, std::weak_ptr<WeakptrTest>(tobj), 1212);
+    Invoke(&WeakptrTest::print_param, tobj.get(), std::make_tuple(2019));
     cbw.Run();
-    auto retw = cbw.RunWithResult();
+    auto retw = cbw.RunWithResult();*/
 
-    /*g_thread_map[0] = std::shared_ptr<CThread>(new CThread());
+    g_thread_map[0] = std::shared_ptr<CThread>(new CThread());
     g_thread_map[1] = std::shared_ptr<CThread>(new CThread());
     g_thread_map[2] = std::shared_ptr<CThread>(new CThread());
     for (auto &thd : g_thread_map)
@@ -532,6 +640,7 @@ void thread_atomic_study()
         thd.second->Run();
     }
 
+    std::shared_ptr<WeakptrTest> obj(new WeakptrTest());
     bool work = true;
     int index = 0;
     while (work)
@@ -546,9 +655,25 @@ void thread_atomic_study()
         break;
         default:
         {
-            std::shared_ptr<WeakptrTest> tobj(new WeakptrTest());
-            auto at = Closure<WeakptrTest>(tobj, std::bind(&WeakptrTest::print_id, tobj));
-            PostTask(index++ % 3, std::move(at));
+            int i = index++;
+            int thd = i % 3;
+            switch (thd)
+            {
+            case 0:
+            {
+                std::shared_ptr<WeakptrTest> tobj(new WeakptrTest());
+                PostTask(thd, Bind(&WeakptrTest::print_void, GetWeakPtr(tobj)));
+            }
+                break;
+            case 1:
+                PostTask(thd, Bind(&WeakptrTest::print_param, GetWeakPtr(obj), i));
+                break;
+            case 2:
+                PostTask(thd, Bind(&WeakptrTest::post_task_and_reply, GetWeakPtr(obj), thd));
+                break;
+            default:
+                break;
+            }
         }
         break;
         }
@@ -558,5 +683,5 @@ void thread_atomic_study()
     {
         thd.second->StopSoon();
     }
-    g_thread_map.clear();*/
+    g_thread_map.clear();
 }
