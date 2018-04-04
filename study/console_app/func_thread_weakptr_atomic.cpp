@@ -28,6 +28,7 @@ namespace
             << " \t msg: " << name << std::endl;
     }
 
+    // string utils
     std::string StringPrintf(const char* format, ...)
     {
         std::string str;
@@ -276,73 +277,147 @@ namespace
         }
     }
 
+    // reply
+    template<bool IsReturnVoid, bool IsMemberFunc>
+    struct ReplyHelper;
 
-    template <typename RReturnType, typename RT, typename... RArgs, typename TaskReturnType>
-    void ReplyAdapter(
-        std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply, 
-        TaskReturnType *result
-        )
+    // class member function
+    template<>
+    struct ReplyHelper<false, true>
     {
-        reply->RunWithParam(result);
-        delete result;
-    }
-
-    template <typename TReturnType, typename TT, typename... TArgs, 
-        typename RReturnType, typename RT, typename... RArgs>
-    void ReturnAsParamAdapter(
-        std::shared_ptr<Callback<true, TReturnType, TT, TArgs...>> task,
-        std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
-        )
-    {
-        std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
-        if (thd)
+        template <typename RReturnType, typename RT, typename... RArgs, typename TaskReturnType>
+        static void ReplyAdapter(
+            std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply,
+            TaskReturnType *result
+            )
         {
-            using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
+            std::unique_ptr<TaskReturnType> ptr(result);
+            reply->RunWithParam(ptr.get());
+        }
 
-            if (!std::is_same<typename std::decay<TReturnType>::type, void>::value)
+        template <typename TReturnType, typename TT, typename... TArgs, typename RReturnType, typename RT, typename... RArgs>
+        static void ReturnAsParamAdapter(
+            std::shared_ptr<Callback<true, TReturnType, TT, TArgs...>> task,
+            std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
+            )
+        {
+            std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
+            if (thd)
             {
-                TReturnType *result = new TReturnType(task->RunWithResult());
+                using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
+
+                std::unique_ptr<TReturnType> result(new TReturnType(task->RunWithResult()));
+
                 thd->PostTask(Bind<void, std::shared_ptr<rtype>, TReturnType*>(
                     ReplyAdapter,
                     reply,
-                    result)
+                    result.release())
                     );
             }
         }
-    }
+    };
 
-
-    /*template <typename RReturnType, typename RT, typename... RArgs>
-    void ReplyAdapter(
-        std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
-        )
+    template<>
+    struct ReplyHelper<true, true>
     {
-        reply->Run();
-    }
-
-    template <typename TReturnType = void, typename TT, typename... TArgs,
-        typename RReturnType, typename RT, typename... RArgs>
-        void ReturnAsParamAdapter<void>(
-        std::shared_ptr<Callback<true, TReturnType, TT, TArgs...>> task,
-        std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
-        )
-    {
-        std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
-        if (thd)
+        template <typename RReturnType, typename RT, typename... RArgs>
+        static void ReplyAdapter(
+            std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
+            )
         {
-            using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
-
-            task->Run();
-
-            thd->PostTask(Bind<void, std::shared_ptr<rtype>>(
-                ReplyAdapter,
-                reply)
-                );
+            reply->Run();
         }
-    }*/
 
-    template <typename TReturnType, typename TT, typename... TArgs, 
-        typename RReturnType, typename RT, typename... RArgs>
+        template <typename TReturnType, typename TT, typename... TArgs, typename RReturnType, typename RT, typename... RArgs>
+        static void ReturnAsParamAdapter(
+            std::shared_ptr<Callback<true, TReturnType, TT, TArgs...>> task,
+            std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
+            )
+        {
+            std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
+            if (thd)
+            {
+                using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
+
+                task->Run();
+
+                thd->PostTask(Bind<void, std::shared_ptr<rtype>>(
+                    ReplyAdapter,
+                    reply)
+                    );
+            }
+        }
+    };
+
+    // global function
+    template<>
+    struct ReplyHelper<false, false>
+    {
+        template <typename RReturnType, typename... RArgs, typename TaskReturnType>
+        static void ReplyAdapter(
+            std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply,
+            TaskReturnType *result
+            )
+        {
+            std::unique_ptr<TaskReturnType> ptr(result);
+            reply->RunWithParam(ptr.get());
+        }
+
+        template <typename TReturnType, typename... TArgs, typename RReturnType, typename... RArgs>
+        static void ReturnAsParamAdapter(
+            std::shared_ptr<Callback<false, TReturnType, void, TArgs...>> task,
+            std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply
+            )
+        {
+            std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
+            if (thd)
+            {
+                using rtype = std::decay<Callback<false, RReturnType, void, RArgs...>>::type;
+
+                std::unique_ptr<TReturnType> result(new TReturnType(task->RunWithResult()));
+
+                thd->PostTask(Bind<void, std::shared_ptr<rtype>, TReturnType*>(
+                    ReplyAdapter,
+                    reply,
+                    result.release())
+                    );
+            }
+        }
+    };
+
+    template<>
+    struct ReplyHelper<true, false>
+    {
+        template <typename RReturnType, typename... RArgs>
+        static void ReplyAdapter(
+            std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply
+            )
+        {
+            reply->Run();
+        }
+
+        template <typename TReturnType, typename... TArgs, typename RReturnType, typename... RArgs>
+        static void ReturnAsParamAdapter(
+            std::shared_ptr<Callback<false, TReturnType, void, TArgs...>> task,
+            std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply
+            )
+        {
+            std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
+            if (thd)
+            {
+                using rtype = std::decay<Callback<false, RReturnType, void, RArgs...>>::type;
+
+                task->Run();
+
+                thd->PostTask(Bind<void, std::shared_ptr<rtype>>(
+                    ReplyAdapter,
+                    reply)
+                    );
+            }
+        }
+    };
+
+    template <typename TReturnType, typename TT, typename... TArgs, typename RReturnType, typename RT, typename... RArgs>
     void PostTaskAndReplyWithResult(int tid, 
         Callback<true, TReturnType, TT, TArgs...> &&task, 
         Callback<true, RReturnType, RT, RArgs...> &&reply)
@@ -353,7 +428,25 @@ namespace
             using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
 
             g_thread_map[tid]->PostTask(Bind<void, std::shared_ptr<ttype>, std::shared_ptr<rtype>>(
-                ReturnAsParamAdapter,
+                ReplyHelper<std::is_same<TReturnType, void>::value, true>::ReturnAsParamAdapter,
+                std::shared_ptr<ttype>(new ttype(task)),
+                std::shared_ptr<rtype>(new rtype(reply)))
+                );
+        }
+    }
+
+    template <typename TReturnType, typename... TArgs, typename RReturnType, typename... RArgs>
+    void PostTaskAndReplyWithResultQ(int tid,
+        Callback<false, TReturnType, void, TArgs...> &&task,
+        Callback<false, RReturnType, void, RArgs...> &&reply)
+    {
+        if (g_thread_map.find(tid) != g_thread_map.end())
+        {
+            using ttype = std::decay<Callback<false, TReturnType, void, TArgs...>>::type;
+            using rtype = std::decay<Callback<false, RReturnType, void, RArgs...>>::type;
+
+            g_thread_map[tid]->PostTask(Bind<void, std::shared_ptr<ttype>, std::shared_ptr<rtype>>(
+                ReplyHelper<std::is_same<TReturnType, void>::value, false>::ReturnAsParamAdapter,
                 std::shared_ptr<ttype>(new ttype(task)),
                 std::shared_ptr<rtype>(new rtype(reply)))
                 );
@@ -574,6 +667,27 @@ namespace
     // test
     std::map<int, std::shared_ptr<CThread>> g_thread_map;
 
+    void async_call_void()
+    {
+        print_func("async_call_void");
+    }
+
+    void on_async_call_void()
+    {
+        print_func("on_async_call_void");
+    }
+
+    std::string async_call_string(float ff)
+    {
+        print_func(StringPrintf("async_call_string: %f", ff).c_str());
+        return "async_call";
+    }
+
+    void on_async_call_string(std::string str)
+    {
+        print_func(StringPrintf("on_async_call_string: %s", str.c_str()).c_str());
+    }
+
     class WeakptrTest : public std::enable_shared_from_this<WeakptrTest>
     {
     public:
@@ -585,6 +699,11 @@ namespace
         void print_void()
         {
             print_func("print_void");
+        }
+
+        void on_print_void()
+        {
+            print_func("on_print_void");
         }
 
         int print_param(int i)
@@ -606,10 +725,21 @@ namespace
             i = (i == index) ? 0 : i;
             /*PostTaskAndReplyWithResult(i,
                 Bind(&WeakptrTest::print_param, GetWeakPtr(shared_from_this()), index),
-                Bind(&WeakptrTest::on_print_param, GetWeakPtr(shared_from_this()), 0));*/
-            PostTaskAndReplyWithResult(i,
+                Bind(&WeakptrTest::on_print_param, GetWeakPtr(shared_from_this()), 0)
+                );*/
+            /*PostTaskAndReplyWithResult(i,
                 Bind(&WeakptrTest::print_void, GetWeakPtr(shared_from_this())),
-                Bind(&WeakptrTest::on_print_param, GetWeakPtr(shared_from_this()), -1234));
+                Bind(&WeakptrTest::on_print_void, GetWeakPtr(shared_from_this()))
+                );*/
+            /*PostTaskAndReplyWithResultQ(i,
+                Bind(async_call_void),
+                Bind(on_async_call_void)
+                );*/
+            std::string ss;
+            PostTaskAndReplyWithResultQ(i,
+                Bind(async_call_string, 3.14f),
+                Bind(on_async_call_string, std::string())
+                );
         }
 
     private:
