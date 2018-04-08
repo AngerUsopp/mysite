@@ -24,7 +24,7 @@ namespace
     {
         /*std::ostringstream text;
         std::this_thread::get_id()._To_text(text);*/
-        std::cout << "thread: " << std::this_thread::get_id() 
+        std::cout << "thread: " << std::this_thread::get_id()
             << " \t msg: " << name << std::endl;
     }
 
@@ -150,351 +150,233 @@ namespace
         std::thread::id post_thread_id_;
     };
 
-    template<bool IsMemberFunc, typename ReturnType, typename T, typename... Args>
+    template<bool IsMemberFunc, typename T, bool FillRealArgument, typename BindFunc>
     class Callback;
 
-    template<typename ReturnType, typename... Args>
-    class Callback<false, ReturnType, void, Args...> : public CallbackBase
+    // global function
+    template<typename BindFunc>
+    class Callback<false, void, true, BindFunc> : public CallbackBase
     {
+        typedef typename std::decay<BindFunc>::type _FuncType;
+        typedef typename std::result_of<_FuncType()>::type _ResultType;
+        typedef typename _FuncType::_Bargs _Bargs;
     public:
-        Callback(ReturnType(*func)(Args...), Args&&... args)
+        Callback(BindFunc&& func)
             : func_(func)
-            , _Mybargs(std::forward<Args>(args)...)
         {
         }
 
         virtual void Run() override
         {
-            RunWithResult();
+            func_();
         }
 
-        template<typename ParamType>
-        void RunWithParam(ParamType *result)
+        _ResultType RunWithResult()
         {
-            if (std::tuple_size<_Bargs>::value)
-            {
-                using fstType = std::tuple_element<0, _Bargs>::type;
-                std::get<0>(_Mybargs) = std::move(*((fstType*)result));
-            }
-
-            Invoke(func_, _Mybargs);
-        }
-
-        ReturnType RunWithResult()
-        {
-            return Invoke(func_, _Mybargs);
+            return func_();
         }
 
     private:
-        //typedef typename std::decay<_Fun>::type _Funx;
-        typedef std::tuple<typename std::decay<Args>::type...> _Bargs;
-
-        ReturnType(*func_)(Args...);
-        _Bargs _Mybargs;	// the bound arguments
+        _FuncType func_;
     };
 
-    template<typename ReturnType, typename T, typename... Args>
-    class Callback<true, ReturnType, T, Args...> : public CallbackBase
+    template<typename BindFunc>
+    class Callback<false, void, false, BindFunc> : public CallbackBase
     {
-        //typedef typename std::decay<_Fun>::type _Funx;
-        //using _ArgsType = typename std::decay<Args>::type...;
-        typedef std::tuple<typename std::decay<Args>::type...> _Bargs;
-
+        typedef typename std::decay<BindFunc>::type _FuncType;
+        typedef typename std::result_of<_FuncType()>::type _ResultType;
+        typedef typename _FuncType::_Bargs _Bargs;
     public:
-        Callback(ReturnType(T::*func)(Args...), std::weak_ptr<T> &weakptr, Args&&... args)
+        Callback(BindFunc&& func)
+            : func_(func)
+        {
+        }
+
+        virtual void Run() override
+        {
+            assert(false);
+        }
+
+        template <typename... Args>
+        _ResultType RunWithParam(Args&&... args)
+        {
+            return func_(std::forward<Args>(args)...);
+        }
+
+    private:
+        _FuncType func_;
+    };
+
+    // member function
+    template<typename T, typename BindFunc>
+    class Callback<true, T, true, BindFunc> : public CallbackBase
+    {
+        typedef typename std::decay<BindFunc>::type _FuncType;
+        typedef typename std::result_of<_FuncType()>::type _ResultType;
+        typedef typename _FuncType::_Bargs _Bargs;
+    public:
+        Callback(BindFunc&& func, std::weak_ptr<T> &weakptr)
             : func_(func)
             , weakptr_(weakptr)
-            , _Mybargs(std::forward<Args>(args)...)
         {
         }
 
         virtual void Run() override
         {
-            RunWithResult();
+            std::shared_ptr<T> refptr = weakptr_.lock();
+            if (refptr)
+            {
+                func_();
+            }
+            else
+            {
+                print_func("Run obj deleted!");
+            }
         }
 
-        template<typename ParamType>
-        void RunWithParam(ParamType *result)
+        _ResultType RunWithResult()
         {
-            std::shared_ptr<T> ptr = weakptr_.lock();
-            if (!ptr)
+            std::shared_ptr<T> refptr = weakptr_.lock();
+            if (refptr)
             {
-                print_func("obj deleted");
-                return;
+                return func_();
+            }
+            else
+            {
+                print_func("RunWithResult obj deleted!");
             }
 
-            if (std::tuple_size<_Bargs>::value)
-            {
-                using fstType = std::tuple_element<0, _Bargs>::type;
-                std::get<0>(_Mybargs) = std::move(*((fstType*)result));
-            }
-            
-            Invoke(func_, ptr.get(), _Mybargs);
-        }
-
-        ReturnType RunWithResult()
-        {
-            std::shared_ptr<T> ptr = weakptr_.lock();
-            if (!ptr)
-            {
-                print_func("obj deleted");
-                return ReturnType();
-            }
-
-            return Invoke(func_, ptr.get(), _Mybargs);
+            return _ResultType();
         }
 
     private:
+        _FuncType func_;
         std::weak_ptr<T> weakptr_;
-        ReturnType(T::*func_)(Args...);
-        _Bargs _Mybargs;	// the bound arguments
     };
 
-    // bind
-    template <typename ReturnType, typename... Args>
-    Callback<false, ReturnType, void, Args...> 
-        Bind(ReturnType(*func)(Args...), Args... args)
+    template<typename T, typename BindFunc>
+    class Callback<true, T, false, BindFunc> : public CallbackBase
     {
-        return Callback<false, ReturnType, void, Args...>(
-            func, 
-            std::forward<Args>(args)...);
+        typedef typename std::decay<BindFunc>::type _FuncType;
+        typedef typename std::result_of<_FuncType()>::type _ResultType;
+        typedef typename _FuncType::_Bargs _Bargs;
+    public:
+        Callback(BindFunc&& func, std::weak_ptr<T> &weakptr)
+            : func_(func)
+            , weakptr_(weakptr)
+        {
+        }
+
+        virtual void Run() override
+        {
+            assert(false);
+        }
+
+        template <typename... Args>
+        _ResultType RunWithParam(Args&&... args)
+        {
+            std::shared_ptr<T> refptr = weakptr_.lock();
+            if (refptr)
+            {
+                return func_(std::forward<Args>(args)...);
+            }
+            else
+            {
+                print_func("RunWithParam obj deleted!");
+            }
+
+            return _ResultType();
+        }
+
+    private:
+        _FuncType func_;
+        std::weak_ptr<T> weakptr_;
+    };
+
+    // create direct runable task
+    template<typename BindFunc>
+    std::shared_ptr<Callback<false, void, true, BindFunc>>
+        CreateTask(BindFunc&& _Fx)
+    {
+        using task_type = Callback<false, void, true, BindFunc>;
+        return std::shared_ptr<task_type>(new task_type(std::forward<BindFunc>(_Fx)));
     }
 
-    template <typename ReturnType, typename T, typename... Args>
-    Callback<true, ReturnType, T, Args...> 
-        Bind(ReturnType(T::*func)(Args...), std::weak_ptr<T> &weakptr, Args... args)
+    template<typename T, typename BindFunc>
+    std::shared_ptr<Callback<true, T, true, BindFunc>>
+        CreateTask(BindFunc&& _Fx, std::weak_ptr<T> &weakptr)
     {
-        return Callback<true, ReturnType, T, Args...>(
-            func,
-            weakptr,
-            std::forward<Args>(args)...);
+        using task_type = Callback<true, T, true, BindFunc>;
+        return std::shared_ptr<task_type>(new task_type(std::forward<BindFunc>(_Fx), weakptr));
     }
 
-    // posttask
-    template <typename ReturnType, typename... Args>
-    void PostTask(int tid, Callback<false, ReturnType, void, Args...>&& closure)
+    // create reply task
+    template<typename BindFunc>
+    std::shared_ptr<Callback<false, void, false, BindFunc>>
+        CreateReplyTask(BindFunc&& _Fx)
     {
+        using task_type = Callback<false, void, false, BindFunc>;
+        return std::shared_ptr<task_type>(new task_type(std::forward<BindFunc>(_Fx)));
+    }
+
+    template<typename T, typename BindFunc>
+    std::shared_ptr<Callback<true, T, false, BindFunc>>
+        CreateReplyTask(BindFunc&& _Fx, std::weak_ptr<T> &weakptr)
+    {
+        using task_type = Callback<true, T, false, BindFunc>;
+        return std::shared_ptr<task_type>(new task_type(std::forward<BindFunc>(_Fx), weakptr));
+    }
+
+    // post and reply
+    template <typename RReturnType, typename... RArgs>
+    static void ReplyAdapter(
+        std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply
+        )
+    {
+        reply->Run();
+    }
+
+    template <typename TReturnType, typename... TArgs, typename RReturnType, typename... RArgs>
+    static void ReturnAsParamAdapter(
+        std::shared_ptr<Callback<false, TReturnType, void, TArgs...>> task,
+        std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply
+        )
+    {
+        std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
+        if (thd)
+        {
+            using rtype = std::decay<Callback<false, RReturnType, void, RArgs...>>::type;
+
+            task->Run();
+
+            thd->PostTask(Bind<void, std::shared_ptr<rtype>>(
+                ReplyAdapter,
+                reply)
+                );
+        }
+    }
+
+    template<typename _TaskFunc, typename _ReplyFunc>
+    void PostTaskAndReplyWithResult(
+        int tid,
+        _TaskFunc &&task, 
+        _ReplyFunc &&reply
+        )
+    {
+        auto tc = CreateTask(std::forward<_TaskFunc>(task));
+        auto rc = CreateReplyTask(std::forward<_TaskFunc>(reply));
+
         if (g_thread_map.find(tid) != g_thread_map.end())
         {
-            g_thread_map[tid]->PostTask(std::move(closure));
+            using ttype = std::decay<Callback<false, TReturnType, void, TArgs...>>::type;
+            using rtype = std::decay<Callback<false, RReturnType, void, RArgs...>>::type;
+
+            g_thread_map[tid]->PostTask(Bind<void, std::shared_ptr<ttype>, std::shared_ptr<rtype>>(
+                ReplyHelper<std::is_same<TReturnType, void>::value, false>::ReturnAsParamAdapter,
+                std::shared_ptr<ttype>(new ttype(task)),
+                std::shared_ptr<rtype>(new rtype(reply)))
+                );
         }
-    }
-
-    template <typename ReturnType, typename T, typename... Args>
-    void PostTask(int tid, Callback<true, ReturnType, T, Args...> &&closure)
-    {
-        if (g_thread_map.find(tid) != g_thread_map.end())
-        {
-            g_thread_map[tid]->PostTask(std::move(closure));
-        }
-    }
-
-    // reply
-    template<bool IsReturnVoid, bool IsMemberFunc>
-    struct ReplyHelper;
-
-    // class member function
-    template<>
-    class ReplyHelper<false, true>
-    {
-    public:
-        template <typename RReturnType, typename RT, typename... RArgs, typename TaskReturnType>
-        static void ReplyAdapter(
-            std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply,
-            TaskReturnType *result
-            )
-        {
-            std::unique_ptr<TaskReturnType> ptr(result);
-            reply->RunWithParam(ptr.get());
-        }
-
-        template <typename TReturnType, typename TT, typename... TArgs, typename RReturnType, typename RT, typename... RArgs>
-        static void ReturnAsParamAdapter(
-            std::shared_ptr<Callback<true, TReturnType, TT, TArgs...>> task,
-            std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
-            )
-        {
-            std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
-            if (thd)
-            {
-                using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
-
-                std::unique_ptr<TReturnType> result(new TReturnType(task->RunWithResult()));
-
-                thd->PostTask(Bind<void, std::shared_ptr<rtype>, TReturnType*>(
-                    ReplyAdapter,
-                    reply,
-                    result.release())
-                    );
-            }
-        }
-    };
-
-    template<>
-    class ReplyHelper<true, true>
-    {
-    public:
-        template <typename RReturnType, typename RT, typename... RArgs>
-        static void ReplyAdapter(
-            std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
-            )
-        {
-            reply->Run();
-        }
-
-        template <typename TReturnType, typename TT, typename... TArgs, typename RReturnType, typename RT, typename... RArgs>
-        static void ReturnAsParamAdapter(
-            std::shared_ptr<Callback<true, TReturnType, TT, TArgs...>> task,
-            std::shared_ptr<Callback<true, RReturnType, RT, RArgs...>> reply
-            )
-        {
-            std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
-            if (thd)
-            {
-                using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
-
-                task->Run();
-
-                thd->PostTask(Bind<void, std::shared_ptr<rtype>>(
-                    ReplyAdapter,
-                    reply)
-                    );
-            }
-        }
-    };
-
-    // global function
-    template<>
-    class ReplyHelper<false, false>
-    {
-    public:
-        template <typename RReturnType, typename... RArgs, typename TaskReturnType>
-        static void ReplyAdapter(
-            std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply,
-            TaskReturnType *ret
-            )
-        {
-            std::unique_ptr<TaskReturnType> result(ret);
-            reply->RunWithParam(result.get());
-        }
-
-        template <typename TReturnType, typename... TArgs, typename RReturnType, typename... RArgs>
-        static void ReturnAsParamAdapter(
-            std::shared_ptr<Callback<false, TReturnType, void, TArgs...>> task,
-            std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply
-            )
-        {
-            std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
-            if (thd)
-            {
-                using rtype = std::decay<Callback<false, RReturnType, void, RArgs...>>::type;
-
-                std::unique_ptr<TReturnType> result(new TReturnType(task->RunWithResult()));
-
-                thd->PostTask(Bind<void, std::shared_ptr<rtype>, TReturnType*>(
-                    ReplyAdapter,
-                    reply,
-                    result.release())
-                    );
-            }
-        }
-    };
-
-    template<>
-    class ReplyHelper<true, false>
-    {
-    public:
-        template <typename RReturnType, typename... RArgs>
-        static void ReplyAdapter(
-            std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply
-            )
-        {
-            reply->Run();
-        }
-
-        template <typename TReturnType, typename... TArgs, typename RReturnType, typename... RArgs>
-        static void ReturnAsParamAdapter(
-            std::shared_ptr<Callback<false, TReturnType, void, TArgs...>> task,
-            std::shared_ptr<Callback<false, RReturnType, void, RArgs...>> reply
-            )
-        {
-            std::shared_ptr<CThread> thd = CThread::GetThread(reply->get_post_thread_id());
-            if (thd)
-            {
-                using rtype = std::decay<Callback<false, RReturnType, void, RArgs...>>::type;
-
-                task->Run();
-
-                thd->PostTask(Bind<void, std::shared_ptr<rtype>>(
-                    ReplyAdapter,
-                    reply)
-                    );
-            }
-        }
-    };
-
-    // postandreply
-    template<bool IsMemberFunc>
-    class PostHelper;
-    
-    template<>
-    class PostHelper<true>
-    {
-    public:
-        template <typename TReturnType, typename TT, typename... TArgs, typename RReturnType, typename RT, typename... RArgs>
-        static void PostTaskAndReplyWithResult(int tid,
-            Callback<true, TReturnType, TT, TArgs...> &&task,
-            Callback<true, RReturnType, RT, RArgs...> &&reply)
-        {
-            if (g_thread_map.find(tid) != g_thread_map.end())
-            {
-                using ttype = std::decay<Callback<true, TReturnType, TT, TArgs...>>::type;
-                using rtype = std::decay<Callback<true, RReturnType, RT, RArgs...>>::type;
-
-                g_thread_map[tid]->PostTask(Bind<void, std::shared_ptr<ttype>, std::shared_ptr<rtype>>(
-                    ReplyHelper<std::is_same<TReturnType, void>::value, true>::ReturnAsParamAdapter,
-                    std::shared_ptr<ttype>(new ttype(task)),
-                    std::shared_ptr<rtype>(new rtype(reply)))
-                    );
-            }
-        }
-    };
-
-    template<>
-    class PostHelper<false>
-    {
-    public:
-        template <typename TReturnType, typename... TArgs, typename RReturnType, typename... RArgs>
-        static void PostTaskAndReplyWithResult(int tid,
-            Callback<false, TReturnType, void, TArgs...> &&task,
-            Callback<false, RReturnType, void, RArgs...> &&reply)
-        {
-            if (g_thread_map.find(tid) != g_thread_map.end())
-            {
-                using ttype = std::decay<Callback<false, TReturnType, void, TArgs...>>::type;
-                using rtype = std::decay<Callback<false, RReturnType, void, RArgs...>>::type;
-
-                g_thread_map[tid]->PostTask(Bind<void, std::shared_ptr<ttype>, std::shared_ptr<rtype>>(
-                    ReplyHelper<std::is_same<TReturnType, void>::value, false>::ReturnAsParamAdapter,
-                    std::shared_ptr<ttype>(new ttype(task)),
-                    std::shared_ptr<rtype>(new rtype(reply)))
-                    );
-            }
-        }
-
-    };
-
-    // weak_ptr
-    template <typename T>
-    std::weak_ptr<T> GetWeakPtr(T* ptr)
-    {
-        return GetWeakPtr(std::shared_ptr<T>(ptr));
-    }
-
-    template <typename T>
-    std::weak_ptr<T> GetWeakPtr(std::shared_ptr<T>& ptr)
-    {
-        return std::weak_ptr<T>(ptr);
     }
 
     // semphore
@@ -580,8 +462,8 @@ namespace
 
         CThread& operator=(CThread &right) = delete;
 
-        template <class ReturnType, typename... Args>
-        void PostTask(Callback<false, ReturnType, void, Args...> &&closure)
+        template <typename BindFunc>
+        void PostTask(BindFunc &&closure)
         {
             if (!thread_)
             {
@@ -589,11 +471,12 @@ namespace
                 return;
             }
 
-            PostBaseTask(std::shared_ptr<CallbackBase>(new Callback<false, ReturnType, void, Args...>(std::move(closure))));
+            PostBaseTask(std::shared_ptr<CallbackBase>(
+                std::move(CreateTask(std::forward<BindFunc>(closure)))));
         }
 
-        template <class ReturnType, typename T, typename... Args>
-        void PostTask(Callback<true, ReturnType, T, Args...> &&closure)
+        template <class BindFunc, typename T>
+        void PostTask(BindFunc &&closure, std::weak_ptr<T> &weakptr)
         {
             if (!thread_)
             {
@@ -601,7 +484,8 @@ namespace
                 return;
             }
 
-            PostBaseTask(std::shared_ptr<CallbackBase>(new Callback<true, ReturnType, T, Args...>(std::move(closure))));
+            PostBaseTask(std::shared_ptr<CallbackBase>(
+                std::move(CreateTask(std::forward<BindFunc>(closure), weakptr))));
         }
 
         void Run()
@@ -654,7 +538,7 @@ namespace
             std::shared_ptr<CThread> pThis = weakptr.lock();
             if (pThis)
             {
-                pThis->_ThreadFunc();            
+                pThis->_ThreadFunc();
             }
         }
 
@@ -725,7 +609,7 @@ namespace
         return "async_call";
     }
 
-    void on_async_call_value(std::string ch)
+    void on_async_call_value(const std::string &ch)
     {
         print_func(StringPrintf("on_async_call_value: %s", ch.c_str()).c_str());
     }
@@ -766,22 +650,22 @@ namespace
             int i = 2 - index;
             i = (i == index) ? 0 : i;
             /*PostHelper<true>::PostTaskAndReplyWithResult(i,
-                Bind(&WeakptrTest::print_param, GetWeakPtr(shared_from_this()), index),
-                Bind(&WeakptrTest::on_print_param, GetWeakPtr(shared_from_this()), 0)
-                );*/
+            Bind(&WeakptrTest::print_param, GetWeakPtr(shared_from_this()), index),
+            Bind(&WeakptrTest::on_print_param, GetWeakPtr(shared_from_this()), 0)
+            );*/
             /*PostHelper<true>::PostTaskAndReplyWithResult(i,
-                Bind(&WeakptrTest::print_void, GetWeakPtr(shared_from_this())),
-                Bind(&WeakptrTest::on_print_void, GetWeakPtr(shared_from_this()))
-                );*/
+            Bind(&WeakptrTest::print_void, GetWeakPtr(shared_from_this())),
+            Bind(&WeakptrTest::on_print_void, GetWeakPtr(shared_from_this()))
+            );*/
             /*PostHelper<false>::PostTaskAndReplyWithResult(i,
-                Bind(async_call_void),
-                Bind(on_async_call_void)
-                );*/
+            Bind(async_call_void),
+            Bind(on_async_call_void)
+            );*/
             std::string ss;
-            PostHelper<false>::PostTaskAndReplyWithResult(i,
+            /*PostHelper<false>::PostTaskAndReplyWithResult(i,
                 Bind(async_call_value, 3.14f),
                 Bind(on_async_call_value, ss)
-                );
+                );*/
         }
 
     private:
@@ -790,19 +674,49 @@ namespace
 }
 
 
-void thread_atomic_study()
+void thread_post_task_study()
 {
-    /*int intpram = 111;
-    auto cb = Bind(print_func, "thread_atomic_study");
-    cb.Run();
-    auto ret = cb.RunWithResult();
-    Invoke(print_func, std::make_tuple("thread_atomic_study"));*/
+    using namespace std::placeholders;
+    std::shared_ptr<WeakptrTest> obj(new WeakptrTest());
 
-    /*std::shared_ptr<WeakptrTest> tobj(new WeakptrTest());
-    auto cbw = Bind(&WeakptrTest::print_param, std::weak_ptr<WeakptrTest>(tobj), 1212);
-    Invoke(&WeakptrTest::print_param, tobj.get(), std::make_tuple(2019));
-    cbw.Run();
-    auto retw = cbw.RunWithResult();*/
+    auto fc = std::bind(on_async_call_value, _1);
+    auto aa = fc;
+    //aa();
+
+    //auto mf = std::move(std::bind(&WeakptrTest::print_param, obj, _1));
+    //mf(1);
+
+    /*auto gf = Bind(std::bind(async_call_value, 3.14f));
+    gf.Run();
+    auto gret = gf.RunWithResult();*/
+
+    auto gt = CreateTask(std::bind(async_call_value, 3.18f));
+    gt->Run();
+    auto gret = gt->RunWithResult();
+
+    auto mt = CreateTask(std::bind(&WeakptrTest::print_param, obj.get(), 2345), std::weak_ptr<WeakptrTest>(obj));
+    //obj.reset();
+    mt->Run();
+    auto mret = mt->RunWithResult();
+
+    std::cout << "------------------------------------" << std::endl;
+
+    auto gtr = CreateReplyTask(std::bind(async_call_value, _1));
+    //gtr->Run();
+    auto gretr = gtr->RunWithParam(4.5f);
+
+    auto mtr = CreateReplyTask(std::bind(&WeakptrTest::print_param, obj.get(), _1), std::weak_ptr<WeakptrTest>(obj));
+    //obj.reset();
+    //mtr->Run();
+    auto mretr = mtr->RunWithParam(-343);
+
+    /*auto mf1 = Bound(std::bind(&WeakptrTest::print_param, obj, _1));
+    auto ret1 = mf1.RunWithParam(-432);*/
+    /*auto nm = Bind(on_async_call_value, "qwer");
+    nm.Run();*/
+    //std::function<void(const std::string&)> ff = std::bind(on_async_call_value, "asd");
+
+    std::cout << "------------------------------------" << std::endl;
 
     g_thread_map[0] = std::shared_ptr<CThread>(new CThread());
     g_thread_map[1] = std::shared_ptr<CThread>(new CThread());
@@ -812,7 +726,6 @@ void thread_atomic_study()
         thd.second->Run();
     }
 
-    std::shared_ptr<WeakptrTest> obj(new WeakptrTest());
     bool work = true;
     int index = 0;
     while (work)
@@ -834,14 +747,14 @@ void thread_atomic_study()
             case 0:
             {
                 std::shared_ptr<WeakptrTest> tobj(new WeakptrTest());
-                PostTask(thd, Bind(&WeakptrTest::print_void, GetWeakPtr(tobj)));
+                g_thread_map[thd]->PostTask(std::bind(&WeakptrTest::print_void, tobj), std::weak_ptr<WeakptrTest>(tobj));
             }
-                break;
+            break;
             case 1:
-                PostTask(thd, Bind(&WeakptrTest::print_param, GetWeakPtr(obj), i));
+                g_thread_map[thd]->PostTask(std::bind(&WeakptrTest::print_param, obj, i));
                 break;
             case 2:
-                PostTask(thd, Bind(&WeakptrTest::post_task_and_reply, GetWeakPtr(obj), thd));
+                g_thread_map[thd]->PostTask(std::bind(&WeakptrTest::post_task_and_reply, obj, thd));
                 break;
             default:
                 break;

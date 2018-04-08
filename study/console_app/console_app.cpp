@@ -81,6 +81,7 @@ void right_ref_study();
 void auto_decltype_study();
 void thread_atomic_study();
 void variadic_templates_example();
+void thread_post_task_study();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -89,7 +90,8 @@ int _tmain(int argc, _TCHAR* argv[])
     //right_ref_study();
     //auto_decltype_study();
     //variadic_templates_example();
-    thread_atomic_study();
+    //thread_atomic_study();
+    thread_post_task_study();
     system("pause");
 	return 0;
 }
