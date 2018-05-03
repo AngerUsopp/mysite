@@ -82,6 +82,7 @@ void auto_decltype_study();
 void thread_atomic_study();
 void variadic_templates_example();
 void thread_post_task_study();
+void effective_example();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -91,7 +92,8 @@ int _tmain(int argc, _TCHAR* argv[])
     //auto_decltype_study();
     //variadic_templates_example();
     //thread_atomic_study();
-    thread_post_task_study();
+    //thread_post_task_study();
+    effective_example();
     system("pause");
 	return 0;
 }

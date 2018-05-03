@@ -85,6 +85,7 @@
   <ItemGroup>
     <ClCompile Include="auto_decltype.cpp" />
     <ClCompile Include="console_app.cpp" />
+    <ClCompile Include="effective_example.cpp" />
     <ClCompile Include="func_thread_weakptr_atomic.cpp" />
     <ClCompile Include="post_task_example.cpp" />
     <ClCompile Include="right_value_ref.cpp" />
