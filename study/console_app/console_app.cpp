@@ -83,6 +83,7 @@ void thread_atomic_study();
 void variadic_templates_example();
 void thread_post_task_study();
 void effective_example();
+void thread_message_example();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -93,7 +94,8 @@ int _tmain(int argc, _TCHAR* argv[])
     //variadic_templates_example();
     //thread_atomic_study();
     //thread_post_task_study();
-    effective_example();
+    //effective_example();
+    thread_message_example();
     system("pause");
 	return 0;
 }
