@@ -24,6 +24,12 @@ namespace
             return &str_;
         }
 
+        std::string& operator*()
+        {
+            return str_;
+        }
+
+        // ÒşÊ½×ª»»²Ù×÷·û
         operator std::string()
         {
             return str_;
