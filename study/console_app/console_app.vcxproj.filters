@@ -56,6 +56,9 @@
     <ClCompile Include="thread_message.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="dead_lock_example.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="console_app.rc">

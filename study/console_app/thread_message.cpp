@@ -22,7 +22,7 @@ namespace
                 dw = GetQueueStatus(QS_ALLINPUT | QS_ALLPOSTMESSAGE);
                 printf("status: h = 0x%04x, l = 0x%04x\n", HIWORD(dw), LOWORD(dw));
 
-                work = ::GetMessage(&msg, nullptr, 0, 0);
+                work = !!::GetMessage(&msg, nullptr, 0, 0);
                 //work = ::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
                 if (work)
                 {

@@ -155,7 +155,7 @@ namespace
             std::cout << "In MemoryBlock(const MemoryBlock&). id = " << id_ << ", length = "
                 << other._length << ". Copying resource." << std::endl;
 
-            std::copy(other._data, other._data + _length, _data);
+            //std::copy(other._data, other._data + _length, _data);
         }
 
         // Copy assignment operator.  
@@ -171,7 +171,7 @@ namespace
 
                 _length = other._length;
                 _data = new int[_length];
-                std::copy(other._data, other._data + _length, _data);
+                //std::copy(other._data, other._data + _length, _data);
             }
             return *this;
         }

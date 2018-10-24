@@ -18,7 +18,7 @@ public:
         copy_id_ = 0;
     }
 
-    Pred(const Pred &r)/* = delete;*/   // delete±Ì æΩ˚”√
+    Pred(const Pred &r)/* = delete;*/
     {
         static int i = 0;
         copy_ = true;
@@ -84,6 +84,7 @@ void variadic_templates_example();
 void thread_post_task_study();
 void effective_example();
 void thread_message_example();
+void dead_lock_example();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -95,7 +96,8 @@ int _tmain(int argc, _TCHAR* argv[])
     //thread_atomic_study();
     //thread_post_task_study();
     //effective_example();
-    thread_message_example();
+    //thread_message_example();
+    dead_lock_example();
     system("pause");
 	return 0;
 }
