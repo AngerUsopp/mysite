@@ -4,6 +4,7 @@
 *.aps
 *.user
 *.opensdf
+*.orig
 
 ipch/
 
