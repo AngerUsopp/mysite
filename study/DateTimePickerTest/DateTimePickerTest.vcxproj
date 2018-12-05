@@ -111,6 +111,7 @@ copy $(SolutionDir)..\third_party\libcurl\bin\libcurl.dll $(OutDir)libcurl.dll;<
   <ItemGroup>
     <ClInclude Include="DateTimePickerTest.h" />
     <ClInclude Include="DateTimePickerTestDlg.h" />
+    <ClInclude Include="explorer1.h" />
     <ClInclude Include="ModalDialogTest.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -119,6 +120,7 @@ copy $(SolutionDir)..\third_party\libcurl\bin\libcurl.dll $(OutDir)libcurl.dll;<
   <ItemGroup>
     <ClCompile Include="DateTimePickerTest.cpp" />
     <ClCompile Include="DateTimePickerTestDlg.cpp" />
+    <ClCompile Include="explorer1.cpp" />
     <ClCompile Include="ModalDialogTest.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -139,7 +141,7 @@ copy $(SolutionDir)..\third_party\libcurl\bin\libcurl.dll $(OutDir)libcurl.dll;<
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties RESOURCE_FILE="DateTimePickerTest.rc" />
+      <UserProperties _x007B_8856F961-340A-11D0-A96B-00C04FD705A2_x007D_="CExplorer1" RESOURCE_FILE="DateTimePickerTest.rc" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

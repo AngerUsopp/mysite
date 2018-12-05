@@ -92,6 +92,7 @@ void CDateTimePickerTestDlg::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_DATETIMEPICKER1, m_DateTimeCtrl);
     DDX_Control(pDX, IDOK, btn_ok);
     DDX_Control(pDX, IDCANCEL, btn_cancel);
+    DDX_Control(pDX, IDC_EXPLORER1, m_ieCtrl);
 }
 
 BEGIN_MESSAGE_MAP(CDateTimePickerTestDlg, CDialogEx)

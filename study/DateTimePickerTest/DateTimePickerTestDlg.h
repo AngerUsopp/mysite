@@ -5,6 +5,7 @@
 #pragma once
 #include "afxdtctl.h"
 #include "afxwin.h"
+#include "explorer1.h"
 
 
 // CDateTimePickerTestDlg ¶Ô»°¿ò
@@ -41,4 +42,5 @@ public:
     afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
     CButton btn_ok;
     CButton btn_cancel;
+    CExplorer1 m_ieCtrl;
 };
