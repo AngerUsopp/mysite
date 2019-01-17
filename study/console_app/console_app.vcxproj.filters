@@ -59,6 +59,9 @@
     <ClCompile Include="dead_lock_example.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ipv6_example.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="console_app.rc">

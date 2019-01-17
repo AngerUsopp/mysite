@@ -7,7 +7,6 @@
 #include <list>
 
 #include "cef/include/cef_app.h"
-#include "cef/include/cef_app.h"
 #include "cef/include/cef_browser.h"
 #include "cef/include/cef_client.h"
 #include "cef/include/wrapper/cef_closure_task.h"
