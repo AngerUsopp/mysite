@@ -93,13 +93,13 @@ int _tmain(int argc, _TCHAR* argv[])
     //vector_study();
     //right_ref_study();
     //auto_decltype_study();
-    //variadic_templates_example();
+    variadic_templates_example();
     //thread_atomic_study();
     //thread_post_task_study();
     //effective_example();
     //thread_message_example();
     //dead_lock_example();
-    ipv6_example();
+    //ipv6_example();
     system("pause");
 	return 0;
 }
