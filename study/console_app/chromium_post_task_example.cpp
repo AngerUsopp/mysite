@@ -57,6 +57,85 @@ namespace
         return str;
     }
 
+    /*
+     * RunnableAdapter封装函数原型以及函数调用接口
+     */
+    template <class Functor>
+    class RunnableAdapter;
+
+    template <class R>
+    class RunnableAdapter<R(*)()>
+    {
+    public:
+        typedef typename std::decay<Functor>::type RunType;
+        typedef typename std::result_of_t<RunType()>::type ResultType;
+
+        explicit RunnableAdapter(R(T::*function)())
+            : function_(function)
+        {
+        }
+
+        R Run()
+        {
+            return function_();
+        }
+
+    private:
+        R(T::*function_)() = nullptr;
+    };
+
+    template <class R, class T>
+    class RunnableAdapter<R(T::*)()>
+    {
+    public:
+        typedef typename std::decay<Functor>::type RunType;
+        typedef typename std::result_of_t<RunType()>::type ResultType;
+
+        //template <typename... Args>
+        explicit RunnableAdapter(R(T::*method)())
+            : method_(method)
+        {
+        }
+
+        R Run(T* object)
+        {
+            //return object->method_();
+            return (object->*method_)();
+        }
+
+    private:
+        R(T::*method_)() = nullptr;
+        //std::weak_ptr<T> weak_ptr_;
+    };
+
+    template <class R, class T>
+    class RunnableAdapter<R(T::*)() const>
+    {
+    public:
+        typedef typename std::decay<Functor>::type RunType;
+        typedef typename std::result_of_t<RunType()>::type ResultType;
+
+        //template <typename... Args>
+        explicit RunnableAdapter(R(T::*method)() const)
+            : method_(method)
+        {
+        }
+
+        R Run(const T* object)
+        {
+            //return object->method_();
+            return (object->*method_)();
+        }
+
+    private:
+        R(T::*method_)() const = nullptr;
+        //std::weak_ptr<T> weak_ptr_;
+    };
+
+    /*
+     * BindStates存储RunnableAdapter所封装的函数的参数以及成员函数的类实例指针
+     */
+
     // callback
     class CallbackBase
     {
@@ -212,6 +291,12 @@ namespace
         _FuncType func_;
         std::weak_ptr<T> weakptr_;
     };
+
+    template <class Functor>
+    Callback<> Bind(Functor functor)
+    {
+        return Callback<>();
+    }
 
     // create direct runable task
     template<typename BindFunc>
@@ -696,7 +781,7 @@ namespace
 }
 
 
-void thread_post_task_study()
+void chromium_post_task_study()
 {
     using namespace std::placeholders;
     std::shared_ptr<WeakptrTest> obj(new WeakptrTest());

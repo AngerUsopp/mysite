@@ -20,10 +20,10 @@ namespace
     auto pf1()->auto(*)()->int(*)() { return nullptr; }
 
     int func_ca(const CA&) { return 10; }
-    int(*int_func_string(const std::string &))(const CA &) { return func_ca; }
-    int(*(*func0(const std::wstring &wstr))(const std::string&)) (const CA&) { return int_func_string; }
-    auto func_auto0(const std::wstring &wstr)->auto(*)(const std::string&)->int(*)(const CA&) { return int_func_string; }
-    auto func_auto1(const std::wstring &wstr)->auto(*)(const std::string& str)->decltype(int_func_string(str)) { return int_func_string; }
+    int(*int_func_string(const std::string&))(const CA&) { return func_ca; }
+    int(*(*func0(const std::wstring&))(const std::string&)) (const CA&) { return int_func_string; }
+    auto func_auto0(const std::wstring&)->auto(*)(const std::string&)->int(*)(const CA&) { return int_func_string; }
+    auto func_auto1(const std::wstring&)->auto(*)(const std::string&)->decltype(int_func_string(std::string())) { return int_func_string; }
 }
 
 void auto_decltype_study()

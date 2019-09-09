@@ -12,6 +12,7 @@
 #include <memory>
 #include <queue>
 #include <map>
+#include <assert.h>
 
 #include <stdio.h>
 #include <stdlib.h>

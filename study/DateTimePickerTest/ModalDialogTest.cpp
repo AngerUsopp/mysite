@@ -178,9 +178,9 @@ int OnCurlDataSendCallback(void* data,
 {
     std::tuple<std::string, int> *send_data = static_cast<std::tuple<std::string, int>*>(userData);
     int r_s = size * cnt;
-    int ret = __min(r_s, std::get<0>(*send_data).length() - std::get<1>(*send_data));
+    int ret = __min(r_s, (int)(std::get<0>(*send_data).length()) - std::get<1>(*send_data));
 
-    std::_Copy_n(std::get<0>(*send_data).data() + std::get<1>(*send_data), ret, static_cast<char*>(data));
+    std::copy_n(std::get<0>(*send_data).data() + std::get<1>(*send_data), ret, static_cast<char*>(data));
     std::get<1>(*send_data) += ret;
 
     return ret;
@@ -299,13 +299,12 @@ void url_post(const std::string &json)
 void curl_post_blob()
 {
     char *buffer = NULL;
-    long len;
     CFile file;
     if (file.Open(L"D:\\Pictures\\small.png", CFile::modeRead))
     {
-        len = file.GetLength();
+        UINT len = (UINT)file.GetLength();
         buffer = new char[len];
-        file.Read(buffer, file.GetLength());
+        file.Read(buffer, len);
         file.Close();
     }
     if (!buffer)

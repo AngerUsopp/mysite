@@ -9,18 +9,18 @@ namespace
     {	// default deleter for unique_ptr
         typedef release_delete<_Ty> _Myt;
 
-        release_delete() _NOEXCEPT
+        release_delete()
         {	// default construct
         }
 
         template<class _Ty2,
         class = typename enable_if<is_convertible<_Ty2 *, _Ty *>::value,
             void>::type>
-            release_delete(const release_delete<_Ty2>&) _NOEXCEPT
+            release_delete(const release_delete<_Ty2>&)
         {	// construct from another default_delete
         }
 
-        void operator()(_Ty *_Ptr) const _NOEXCEPT
+        void operator()(_Ty *_Ptr) const
         {	// delete a pointer
             static_assert(0 < sizeof(_Ty),
             "can't release an incomplete type");

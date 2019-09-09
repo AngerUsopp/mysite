@@ -62,6 +62,15 @@
     <ClCompile Include="ipv6_example.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ipc_channel.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="std_bind_task_example.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="chromium_post_task_example.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="console_app.rc">
