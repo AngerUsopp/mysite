@@ -5,6 +5,7 @@
 
 #include "data_encapsulation/smart_pointer.h"
 #include "functional/callback.h"
+#include "incoming_task_queue.h"
 #include "time/time_util.h"
 
 namespace mctm
@@ -43,7 +44,7 @@ namespace mctm
     private:
         void DoRunLoop();
         bool QuitCurrentLoop();
-        //void RunLoopInternal();
+        void ReloadWorkQueue();
 
         // call by RunLoop
         void set_run_loop(RunLoopRef run_loop);
@@ -55,6 +56,9 @@ namespace mctm
         Type type_ = Type::TYPE_DEFAULT;
         ScopedMessagePump pump_;
         RunLoopRef current_run_loop_;
+        IncomingTaskQueue incoming_task_queue_;
+        TaskQueue work_queue_;
+        TaskQueue delayed_work_queue_;
     };
 }
 

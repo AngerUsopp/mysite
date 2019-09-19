@@ -6,7 +6,7 @@
 #include "data_encapsulation/smart_pointer.h"
 #include "synchronization/waitable_event.h"
 
-#include "message_loop.h"
+#include "message_loop/message_loop.h"
 
 /*  Thread类本身不直接接受task投递，需通过其MesssageLoop来做这些工作，采用此结构的原因是：
  *  1、Thread实例并不是在其所封装的线程中被创建的，那么线程与Thread实例的对应关联就必须延后

@@ -34,6 +34,9 @@
     <Filter Include="time">
       <UniqueIdentifier>{7dc47c95-2720-493b-b652-12edf70d4851}</UniqueIdentifier>
     </Filter>
+    <Filter Include="message_loop">
+      <UniqueIdentifier>{635946f2-6cc5-4bf8-82e8-13c31041f1ee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -51,15 +54,6 @@
     <ClInclude Include="threading\thread.h">
       <Filter>threading</Filter>
     </ClInclude>
-    <ClInclude Include="threading\message_loop.h">
-      <Filter>threading</Filter>
-    </ClInclude>
-    <ClInclude Include="threading\message_pump.h">
-      <Filter>threading</Filter>
-    </ClInclude>
-    <ClInclude Include="threading\run_loop.h">
-      <Filter>threading</Filter>
-    </ClInclude>
     <ClInclude Include="synchronization\waitable_event.h">
       <Filter>synchronization</Filter>
     </ClInclude>
@@ -72,14 +66,26 @@
     <ClInclude Include="functional\callback.h">
       <Filter>functional</Filter>
     </ClInclude>
-    <ClInclude Include="threading\location.h">
-      <Filter>threading</Filter>
-    </ClInclude>
-    <ClInclude Include="threading\pending_task.h">
-      <Filter>threading</Filter>
-    </ClInclude>
     <ClInclude Include="time\time_util.h">
       <Filter>time</Filter>
+    </ClInclude>
+    <ClInclude Include="message_loop\run_loop.h">
+      <Filter>message_loop</Filter>
+    </ClInclude>
+    <ClInclude Include="message_loop\location.h">
+      <Filter>message_loop</Filter>
+    </ClInclude>
+    <ClInclude Include="message_loop\message_loop.h">
+      <Filter>message_loop</Filter>
+    </ClInclude>
+    <ClInclude Include="message_loop\message_pump.h">
+      <Filter>message_loop</Filter>
+    </ClInclude>
+    <ClInclude Include="message_loop\pending_task.h">
+      <Filter>message_loop</Filter>
+    </ClInclude>
+    <ClInclude Include="message_loop\incoming_task_queue.h">
+      <Filter>message_loop</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -91,15 +97,6 @@
     </ClCompile>
     <ClCompile Include="iocp\iocp.cpp">
       <Filter>iocp</Filter>
-    </ClCompile>
-    <ClCompile Include="threading\message_loop.cpp">
-      <Filter>threading</Filter>
-    </ClCompile>
-    <ClCompile Include="threading\message_pump.cpp">
-      <Filter>threading</Filter>
-    </ClCompile>
-    <ClCompile Include="threading\run_loop.cpp">
-      <Filter>threading</Filter>
     </ClCompile>
     <ClCompile Include="threading\thread.cpp">
       <Filter>threading</Filter>
@@ -113,14 +110,26 @@
     <ClCompile Include="logging\logging.cpp">
       <Filter>logging</Filter>
     </ClCompile>
-    <ClCompile Include="threading\location.cpp">
-      <Filter>threading</Filter>
-    </ClCompile>
-    <ClCompile Include="threading\pending_task.cpp">
-      <Filter>threading</Filter>
-    </ClCompile>
     <ClCompile Include="time\time_util.cpp">
       <Filter>time</Filter>
+    </ClCompile>
+    <ClCompile Include="message_loop\location.cpp">
+      <Filter>message_loop</Filter>
+    </ClCompile>
+    <ClCompile Include="message_loop\message_loop.cpp">
+      <Filter>message_loop</Filter>
+    </ClCompile>
+    <ClCompile Include="message_loop\message_pump.cpp">
+      <Filter>message_loop</Filter>
+    </ClCompile>
+    <ClCompile Include="message_loop\pending_task.cpp">
+      <Filter>message_loop</Filter>
+    </ClCompile>
+    <ClCompile Include="message_loop\run_loop.cpp">
+      <Filter>message_loop</Filter>
+    </ClCompile>
+    <ClCompile Include="message_loop\incoming_task_queue.cpp">
+      <Filter>message_loop</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

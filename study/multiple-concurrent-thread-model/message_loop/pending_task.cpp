@@ -9,6 +9,10 @@ namespace mctm
 
     }
 
+    PendingTask::PendingTask(const Location & posted_from, const Closure & task, TimeTicks delayed_run_time)
+    {
+    }
+
     PendingTask::~PendingTask()
     {
 

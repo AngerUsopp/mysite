@@ -12,6 +12,32 @@ namespace mctm
 
         static TimeDelta FromMilliseconds(__int64 ms);
 
+        // Comparison operators.
+        bool operator==(TimeDelta other) const
+        {
+            return delta_in_ms_ == other.delta_in_ms_;
+        }
+        bool operator!=(TimeDelta other) const
+        {
+            return delta_in_ms_ != other.delta_in_ms_;
+        }
+        bool operator<(TimeDelta other) const
+        {
+            return delta_in_ms_ < other.delta_in_ms_;
+        }
+        bool operator<=(TimeDelta other) const
+        {
+            return delta_in_ms_ <= other.delta_in_ms_;
+        }
+        bool operator>(TimeDelta other) const
+        {
+            return delta_in_ms_ > other.delta_in_ms_;
+        }
+        bool operator>=(TimeDelta other) const
+        {
+            return delta_in_ms_ >= other.delta_in_ms_;
+        }
+
     private:
         explicit TimeDelta(__int64 ms);
 

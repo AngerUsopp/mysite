@@ -1,8 +1,9 @@
 #include "message_loop.h"
 #include "run_loop.h"
-#include "thread_util.h"
 
 #include "logging/logging.h"
+#include "threading/thread_util.h"
+
 
 namespace
 {
@@ -23,6 +24,7 @@ namespace mctm
 
     MessageLoop::MessageLoop(Type type)
         : type_(type)
+        , incoming_task_queue_(shared_from_this())
     {
         DCHECK(!current());
         message_loop_singleton.Pointer()->Set(this);
@@ -51,7 +53,7 @@ namespace mctm
 
     void MessageLoop::PostDelayedTask(const Location& from_here, const Closure& task, TimeDelta delay)
     {
-
+        incoming_task_queue_.AddToIncomingQueue(from_here, task, delay);
     }
 
     bool MessageLoop::ShouldQuitCurrentLoop()
@@ -107,9 +109,10 @@ namespace mctm
         return true;
     }
 
-    /*void MessageLoop::RunLoopInternal()
+    void MessageLoop::ReloadWorkQueue()
     {
-    }*/
+        incoming_task_queue_.ReloadWorkQueue(&work_queue_);
+    }
 
     void MessageLoop::set_run_loop(RunLoopRef run_loop)
     {
