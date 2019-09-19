@@ -28,6 +28,12 @@
     <Filter Include="logging">
       <UniqueIdentifier>{20696bc2-89e2-4b38-b582-00d4362368bb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="functional">
+      <UniqueIdentifier>{57ad407b-34bf-412c-945a-e17ce131beaf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="time">
+      <UniqueIdentifier>{7dc47c95-2720-493b-b652-12edf70d4851}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -63,6 +69,18 @@
     <ClInclude Include="logging\logging.h">
       <Filter>logging</Filter>
     </ClInclude>
+    <ClInclude Include="functional\callback.h">
+      <Filter>functional</Filter>
+    </ClInclude>
+    <ClInclude Include="threading\location.h">
+      <Filter>threading</Filter>
+    </ClInclude>
+    <ClInclude Include="threading\pending_task.h">
+      <Filter>threading</Filter>
+    </ClInclude>
+    <ClInclude Include="time\time_util.h">
+      <Filter>time</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -94,6 +112,15 @@
     </ClCompile>
     <ClCompile Include="logging\logging.cpp">
       <Filter>logging</Filter>
+    </ClCompile>
+    <ClCompile Include="threading\location.cpp">
+      <Filter>threading</Filter>
+    </ClCompile>
+    <ClCompile Include="threading\pending_task.cpp">
+      <Filter>threading</Filter>
+    </ClCompile>
+    <ClCompile Include="time\time_util.cpp">
+      <Filter>time</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

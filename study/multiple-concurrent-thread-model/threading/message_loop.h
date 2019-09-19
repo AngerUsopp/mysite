@@ -1,8 +1,11 @@
 #pragma once
 
+#include "location.h"
 #include "message_pump.h"
 
 #include "data_encapsulation/smart_pointer.h"
+#include "functional/callback.h"
+#include "time/time_util.h"
 
 namespace mctm
 {
@@ -22,6 +25,13 @@ namespace mctm
 
         explicit MessageLoop(Type type);
         ~MessageLoop();
+
+        void PostTask(const Location& from_here,
+            const Closure& task);
+
+        void PostDelayedTask(const Location& from_here,
+            const Closure& task,
+            TimeDelta delay);
         
     protected:
         // MessagePump::Delegate

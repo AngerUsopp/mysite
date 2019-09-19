@@ -44,6 +44,16 @@ namespace mctm
         message_loop_singleton.RemoveInstance();
     }
 
+    void MessageLoop::PostTask(const Location& from_here, const Closure& task)
+    {
+        PostDelayedTask(from_here, task, TimeDelta());
+    }
+
+    void MessageLoop::PostDelayedTask(const Location& from_here, const Closure& task, TimeDelta delay)
+    {
+
+    }
+
     bool MessageLoop::ShouldQuitCurrentLoop()
     {
         if (current_run_loop_)
