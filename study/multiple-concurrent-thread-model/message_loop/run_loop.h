@@ -4,7 +4,7 @@
 
 namespace mctm
 {
-    class RunLoop : public std::enable_shared_from_this<RunLoop>
+    class RunLoop
     {
     public:
         RunLoop();
@@ -21,7 +21,7 @@ namespace mctm
 
     private:
         MessageLoopRef message_loop_;
-        RunLoopRef previous_run_loop_;
+        RunLoop* previous_run_loop_ = nullptr;
         bool quit_called_ = false;
         bool running_ = false;
         int run_depth_ = 1;

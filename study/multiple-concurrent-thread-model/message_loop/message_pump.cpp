@@ -1,5 +1,7 @@
 #include "message_pump.h"
 
+#include <synchapi.h>
+
 
 namespace mctm
 {
@@ -62,7 +64,7 @@ namespace mctm
     
     void MessagePumpForUI::WaitForWork()
     {
-
+        ::Sleep(100);
     }
 
 
@@ -112,7 +114,7 @@ namespace mctm
 
     void MessagePumpForIO::WaitForWork()
     {
-
+        ::Sleep(100);
     }
 
 }

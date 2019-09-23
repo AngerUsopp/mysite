@@ -48,14 +48,14 @@ namespace mctm
             return false;
         }
 
-        RunLoopRef current_run_loop = message_loop_->current_run_loop();
-        if (current_run_loop->quitted())
+        RunLoop* current_run_loop = message_loop_->current_run_loop();
+        if (current_run_loop && current_run_loop->quitted())
         {
             return false;
         }
 
         previous_run_loop_ = current_run_loop;
-        message_loop_->set_run_loop(shared_from_this());
+        message_loop_->set_run_loop(this);
         run_depth_ = previous_run_loop_ ? previous_run_loop_->run_depth_ + 1 : 1;
 
         running_ = true;
@@ -66,6 +66,7 @@ namespace mctm
     {
         running_ = false;
         message_loop_->set_run_loop(previous_run_loop_);
+        message_loop_ = nullptr;
     }
 
 }

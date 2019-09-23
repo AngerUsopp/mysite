@@ -15,7 +15,7 @@ namespace mctm
 {
     MessageLoopRef MessageLoop::current()
     {
-        if (message_loop_singleton.Pointer())
+        if (message_loop_singleton.Pointer() && message_loop_singleton.Pointer()->Get())
         {
             return message_loop_singleton.Pointer()->Get()->shared_from_this();
         }
@@ -24,7 +24,7 @@ namespace mctm
 
     MessageLoop::MessageLoop(Type type)
         : type_(type)
-        , incoming_task_queue_(shared_from_this())
+        , incoming_task_queue_(this)
     {
         DCHECK(!current());
         message_loop_singleton.Pointer()->Set(this);
@@ -56,43 +56,12 @@ namespace mctm
         incoming_task_queue_.AddToIncomingQueue(from_here, task, delay);
     }
 
-    bool MessageLoop::ShouldQuitCurrentLoop()
+    void MessageLoop::Quit()
     {
         if (current_run_loop_)
         {
-            return current_run_loop_->quitted();
+            current_run_loop_->Quit();
         }
-        return true;
-    }
-
-    bool MessageLoop::DoWork()
-    {
-        if (!QuitCurrentLoop())
-        {
-            //////////////////////////////////////////////////////////////////////////
-            return true;
-        }
-        return false;
-    }
-
-    bool MessageLoop::DoDelayedWork()
-    {
-        if (!QuitCurrentLoop())
-        {
-            //////////////////////////////////////////////////////////////////////////
-            return true;
-        }
-        return false;
-    }
-
-    bool MessageLoop::DoIdleWord()
-    {
-        if (!QuitCurrentLoop())
-        {
-            //////////////////////////////////////////////////////////////////////////
-            return true;
-        }
-        return false;
     }
 
     void MessageLoop::DoRunLoop()
@@ -111,17 +80,97 @@ namespace mctm
 
     void MessageLoop::ReloadWorkQueue()
     {
-        incoming_task_queue_.ReloadWorkQueue(&work_queue_);
+        if (work_queue_.empty())
+        {
+            incoming_task_queue_.ReloadWorkQueue(&work_queue_);
+        }
     }
 
-    void MessageLoop::set_run_loop(RunLoopRef run_loop)
+    bool MessageLoop::DeferOrRunPendingTask(const PendingTask& pending_task)
+    {
+        RunTask(pending_task);
+        return true;
+    }
+
+    void MessageLoop::AddToDelayedWorkQueue(const PendingTask& pending_task)
+    {
+        delayed_work_queue_.push(pending_task);
+    }
+
+    void MessageLoop::RunTask(const PendingTask& pending_task)
+    {
+        pending_task.task.Run();
+    }
+
+    void MessageLoop::set_run_loop(RunLoop* run_loop)
     {
         current_run_loop_ = run_loop;
     }
 
-    RunLoopRef MessageLoop::current_run_loop()
+    RunLoop* MessageLoop::current_run_loop()
     {
         return current_run_loop_;
+    }
+
+    bool MessageLoop::ShouldQuitCurrentLoop()
+    {
+        if (current_run_loop_)
+        {
+            return current_run_loop_->quitted();
+        }
+        return true;
+    }
+
+    bool MessageLoop::DoWork()
+    {
+        if (!QuitCurrentLoop())
+        {
+            // 从互斥锁保护的任务队列中一次性把任务提取出来
+            ReloadWorkQueue();
+            while (!work_queue_.empty())
+            {
+                PendingTask pending_task = work_queue_.front();
+                work_queue_.pop();
+
+                if (!pending_task.delayed_run_time.is_null())
+                {
+                    AddToDelayedWorkQueue(pending_task);
+                }
+                else
+                {
+                    if (DeferOrRunPendingTask(pending_task))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    bool MessageLoop::DoDelayedWork()
+    {
+        if (!QuitCurrentLoop())
+        {
+            if (delayed_work_queue_.empty())
+            {
+                return false;
+            }
+
+            //////////////////////////////////////////////////////////////////////////
+
+            return true;
+        }
+        return false;
+    }
+
+    bool MessageLoop::DoIdleWord()
+    {
+        if (!QuitCurrentLoop())
+        {
+            //////////////////////////////////////////////////////////////////////////
+        }
+        return false;
     }
 
 }

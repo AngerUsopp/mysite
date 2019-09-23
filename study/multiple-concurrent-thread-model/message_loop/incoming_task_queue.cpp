@@ -53,7 +53,7 @@ namespace
 
 namespace mctm
 {
-    IncomingTaskQueue::IncomingTaskQueue(MessageLoopRef message_loop)
+    IncomingTaskQueue::IncomingTaskQueue(MessageLoop* message_loop)
         : message_loop_(message_loop)
     {
     }

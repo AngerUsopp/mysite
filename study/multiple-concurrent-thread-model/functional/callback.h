@@ -132,7 +132,7 @@ namespace mctm
             callback_ = std::make_shared<Callback<R(*)(FnArgs...), Functor>>(callback);
         }
 
-        void Run()
+        void Run() const
         {
             if (callback_)
             {

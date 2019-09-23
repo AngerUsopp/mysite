@@ -88,6 +88,7 @@ void thread_message_example();
 void dead_lock_example();
 void ipv6_example();
 void ipc_example();
+void mctm_example();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -103,7 +104,8 @@ int _tmain(int argc, _TCHAR* argv[])
     //dead_lock_example();
     //ipv6_example();
     //ipc_example();
-    thread_std_bind_task_study();
+    //thread_std_bind_task_study();
+    mctm_example();
     system("pause");
 	return 0;
 }

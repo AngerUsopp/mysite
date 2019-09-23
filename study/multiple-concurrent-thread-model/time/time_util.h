@@ -56,6 +56,8 @@ namespace mctm
 
         static TimeTicks Now();
 
+        bool is_null() const;
+
         TimeTicks operator+(TimeDelta delta) const
         {
             return TimeTicks(ticks_in_ms_ + delta.delta_in_ms_);

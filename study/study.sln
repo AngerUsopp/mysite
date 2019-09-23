@@ -22,6 +22,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua_gui_proxy", "lua_gui_proxy\lua_gui_proxy.vcxproj", "{39A221A5-5DB3-4D3F-BA81-BC4441C600B3}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "console_app", "console_app\console_app.vcxproj", "{231DEE0A-BEBA-4A97-B6D9-3DE2B8A48FF4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{90CA17E2-A8DC-40DC-B021-F393E87C9B4E} = {90CA17E2-A8DC-40DC-B021-F393E87C9B4E}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cef-demo", "cef-demo\cef-demo.vcxproj", "{3FD0AEE1-C608-4E0F-8359-FBA3987B5984}"
 EndProject

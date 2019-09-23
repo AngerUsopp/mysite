@@ -10,6 +10,7 @@
 
 namespace mctm
 {
+    class RunLoop;
     class MessageLoop
         : MessagePump::Delegate
         , public std::enable_shared_from_this<MessageLoop>
@@ -33,6 +34,8 @@ namespace mctm
         void PostDelayedTask(const Location& from_here,
             const Closure& task,
             TimeDelta delay);
+
+        void Quit();
         
     protected:
         // MessagePump::Delegate
@@ -45,17 +48,20 @@ namespace mctm
         void DoRunLoop();
         bool QuitCurrentLoop();
         void ReloadWorkQueue();
+        bool DeferOrRunPendingTask(const PendingTask& pending_task);
+        void AddToDelayedWorkQueue(const PendingTask& pending_task);
+        void RunTask(const PendingTask& pending_task);
 
         // call by RunLoop
-        void set_run_loop(RunLoopRef run_loop);
-        RunLoopRef current_run_loop();
+        void set_run_loop(RunLoop* run_loop);
+        RunLoop* current_run_loop();
 
     private:
         friend class RunLoop;
 
         Type type_ = Type::TYPE_DEFAULT;
         ScopedMessagePump pump_;
-        RunLoopRef current_run_loop_;
+        RunLoop* current_run_loop_ = nullptr;
         IncomingTaskQueue incoming_task_queue_;
         TaskQueue work_queue_;
         TaskQueue delayed_work_queue_;

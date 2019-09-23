@@ -71,6 +71,9 @@
     <ClCompile Include="chromium_post_task_example.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="mctm_test.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="console_app.rc">

@@ -12,7 +12,7 @@ namespace mctm
     class IncomingTaskQueue
     {
     public:
-        explicit IncomingTaskQueue(MessageLoopRef message_loop);
+        explicit IncomingTaskQueue(MessageLoop* message_loop);
         ~IncomingTaskQueue();
 
         bool AddToIncomingQueue(const Location& from_here,
@@ -22,7 +22,7 @@ namespace mctm
         void ReloadWorkQueue(TaskQueue* work_queue);
 
     private:
-        MessageLoopRef message_loop_;
+        MessageLoop* message_loop_;
 
         std::recursive_mutex incoming_queue_lock_;
         TaskQueue incoming_queue_;

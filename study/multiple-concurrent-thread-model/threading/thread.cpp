@@ -14,6 +14,19 @@ namespace
 
 namespace mctm
 {
+    std::unique_ptr<mctm::Thread> Thread::AttachCurrentThread(const char* thread_name, MessageLoop::Type type)
+    {
+        if (!MessageLoop::current())
+        {
+            std::unique_ptr<mctm::Thread> thread = std::make_unique<mctm::Thread>(thread_name);
+            SetThreadName(::GetCurrentThreadId(), thread_name);
+            MessageLoopRef message_loop = std::make_shared<MessageLoop>(type);
+            thread->set_message_loop(message_loop);
+            return std::move(thread);
+        }
+        return nullptr;
+    }
+
     Thread::Thread(const char* thread_name)
         : thread_name_(thread_name)
     {
@@ -74,8 +87,8 @@ namespace mctm
 
     void Thread::Run()
     {
-        RunLoopRef run_loop(new RunLoop());
-        run_loop->Run();
+        RunLoop run_loop;
+        run_loop.Run();
     }
 
     void Thread::CleanUp()

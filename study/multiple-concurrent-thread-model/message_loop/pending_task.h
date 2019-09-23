@@ -20,6 +20,12 @@ namespace mctm
         Location posted_from;
         // Secondary sort key for run time.
         int sequence_num = 0;
+
+        // Time when the related task was posted.
+        TimeTicks time_posted;
+
+        // The time when the task should be run.
+        TimeTicks delayed_run_time;
     };
 
     using TaskQueue = std::queue<PendingTask>;

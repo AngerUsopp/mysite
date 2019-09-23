@@ -69,4 +69,9 @@ namespace mctm
         return TimeTicks() + RolloverProtectedNow();
     }
 
+    bool TimeTicks::is_null() const
+    {
+        return ticks_in_ms_ == 0;
+    }
+
 }
