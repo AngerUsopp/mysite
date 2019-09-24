@@ -139,6 +139,11 @@ namespace mctm
                 callback_->BaseRun();
             }
         }
+        
+        bool Equals(const Closure& other) const
+        {
+            return callback_.get() == other.callback_.get();
+        }
 
     private:
         std::shared_ptr<CallbackBase> callback_;

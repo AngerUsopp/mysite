@@ -1,4 +1,5 @@
 #include "incoming_task_queue.h"
+#include "message_loop.h"
 
 namespace
 {
@@ -65,9 +66,14 @@ namespace mctm
     bool IncomingTaskQueue::AddToIncomingQueue(const Location& from_here, 
         const Closure& task, TimeDelta delay)
     {
+        bool was_empty = true;
         PendingTask pending_task(from_here, task, CalculateDelayedRuntime(delay));
-        std::lock_guard<std::recursive_mutex> lock(incoming_queue_lock_);
-        incoming_queue_.push(std::move(pending_task));
+        {
+            std::lock_guard<std::recursive_mutex> lock(incoming_queue_lock_);
+            was_empty = incoming_queue_.empty();
+            incoming_queue_.push(std::move(pending_task));
+        }
+        message_loop_->ScheduleWork(was_empty);
         return true;
     }
 

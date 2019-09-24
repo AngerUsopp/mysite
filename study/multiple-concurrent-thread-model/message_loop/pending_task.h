@@ -29,4 +29,5 @@ namespace mctm
     };
 
     using TaskQueue = std::queue<PendingTask>;
+    using DelayedTaskQueue = std::priority_queue<PendingTask>;
 }

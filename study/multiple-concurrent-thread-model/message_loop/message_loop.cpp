@@ -69,13 +69,9 @@ namespace mctm
         pump_->DoRunLoop();
     }
 
-    bool MessageLoop::QuitCurrentLoop()
+    void MessageLoop::QuitCurrentLoop()
     {
-        if (current_run_loop_ && !current_run_loop_->quitted())
-        {
-            return false;
-        }
-        return true;
+        Quit();
     }
 
     void MessageLoop::ReloadWorkQueue()
@@ -102,6 +98,14 @@ namespace mctm
         pending_task.task.Run();
     }
 
+    void MessageLoop::ScheduleWork(bool pre_task_queue_status_was_empty)
+    {
+        if (pre_task_queue_status_was_empty)
+        {
+            pump_->ScheduleWork();
+        }
+    }
+
     void MessageLoop::set_run_loop(RunLoop* run_loop)
     {
         current_run_loop_ = run_loop;
@@ -123,7 +127,7 @@ namespace mctm
 
     bool MessageLoop::DoWork()
     {
-        if (!QuitCurrentLoop())
+        if (!ShouldQuitCurrentLoop())
         {
             // 从互斥锁保护的任务队列中一次性把任务提取出来
             ReloadWorkQueue();
@@ -135,6 +139,14 @@ namespace mctm
                 if (!pending_task.delayed_run_time.is_null())
                 {
                     AddToDelayedWorkQueue(pending_task);
+
+                    // 如果当前计时任务队列只有这个新插入的任务则通知pump以该任务所需的时间间隔启动计时器，
+                    // 这里对pump的ScheduleDelayedWork的调用是loop计时任务处理循环的启动点，只要一直有计时任务，
+                    // pump内部会自己循环调用ScheduleDelayedWork形成计时任务处理的自循环
+                    if (delayed_work_queue_.top().task.Equals(pending_task.task))
+                    {
+                        pump_->ScheduleDelayedWork(pending_task.delayed_run_time);
+                    }
                 }
                 else
                 {
@@ -148,25 +160,50 @@ namespace mctm
         return false;
     }
 
-    bool MessageLoop::DoDelayedWork()
+    bool MessageLoop::DoDelayedWork(TimeTicks* next_delayed_work_time)
     {
-        if (!QuitCurrentLoop())
+        if (!ShouldQuitCurrentLoop())
         {
             if (delayed_work_queue_.empty())
             {
+                recent_time_ = *next_delayed_work_time = TimeTicks();
                 return false;
             }
 
-            //////////////////////////////////////////////////////////////////////////
+            // When we "fall behind," there will be a lot of tasks in the delayed work
+            // queue that are ready to run.  To increase efficiency when we fall behind,
+            // we will only call Time::Now() intermittently, and then process all tasks
+            // that are ready to run before calling it again.  As a result, the more we
+            // fall behind (and have a lot of ready-to-run delayed tasks), the more
+            // efficient we'll be at handling the tasks.
 
-            return true;
+            TimeTicks next_run_time = delayed_work_queue_.top().delayed_run_time;
+            if (next_run_time > recent_time_)
+            {
+                recent_time_ = TimeTicks::Now();
+                if (next_run_time > recent_time_)
+                {
+                    *next_delayed_work_time = next_run_time;
+                    return false;
+                }
+            }
+
+            PendingTask pending_task = delayed_work_queue_.top();
+            delayed_work_queue_.pop();
+
+            if (!delayed_work_queue_.empty())
+            {
+                *next_delayed_work_time = delayed_work_queue_.top().delayed_run_time;
+            }
+
+            return DeferOrRunPendingTask(pending_task);
         }
         return false;
     }
 
     bool MessageLoop::DoIdleWord()
     {
-        if (!QuitCurrentLoop())
+        if (!ShouldQuitCurrentLoop())
         {
             //////////////////////////////////////////////////////////////////////////
         }

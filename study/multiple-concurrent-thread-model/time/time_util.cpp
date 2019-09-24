@@ -36,7 +36,7 @@ namespace mctm
     }
 
     TimeDelta::TimeDelta(__int64 ms)
-        : delta_in_ms_(ms)
+        : delta_in_us_(ms)
     {
     }
 
@@ -46,7 +46,17 @@ namespace mctm
 
     TimeDelta TimeDelta::FromMilliseconds(__int64 ms)
     {
-        return TimeDelta(ms);
+        return TimeDelta(ms * Time::kMicrosecondsPerMillisecond);
+    }
+
+    double TimeDelta::InMillisecondsF() const
+    {
+        return static_cast<double>(delta_in_us_) / Time::kMicrosecondsPerMillisecond;
+    }
+
+    __int64 TimeDelta::InMilliseconds() const
+    {
+        return delta_in_us_ / Time::kMicrosecondsPerMillisecond;
     }
 
 
@@ -56,7 +66,7 @@ namespace mctm
     }
 
     TimeTicks::TimeTicks(__int64 us)
-        : ticks_in_ms_(us)
+        : ticks_in_us_(us)
     {
     }
 
@@ -71,7 +81,7 @@ namespace mctm
 
     bool TimeTicks::is_null() const
     {
-        return ticks_in_ms_ == 0;
+        return ticks_in_us_ == 0;
     }
 
 }

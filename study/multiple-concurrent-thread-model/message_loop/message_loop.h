@@ -41,16 +41,17 @@ namespace mctm
         // MessagePump::Delegate
         bool ShouldQuitCurrentLoop() override;
         bool DoWork() override;
-        bool DoDelayedWork() override;
+        bool DoDelayedWork(TimeTicks* next_delayed_work_time) override;
         bool DoIdleWord() override;
+        void QuitCurrentLoop() override;
 
     private:
         void DoRunLoop();
-        bool QuitCurrentLoop();
         void ReloadWorkQueue();
         bool DeferOrRunPendingTask(const PendingTask& pending_task);
         void AddToDelayedWorkQueue(const PendingTask& pending_task);
         void RunTask(const PendingTask& pending_task);
+        void ScheduleWork(bool pre_task_queue_status_was_empty);
 
         // call by RunLoop
         void set_run_loop(RunLoop* run_loop);
@@ -58,13 +59,15 @@ namespace mctm
 
     private:
         friend class RunLoop;
+        friend class IncomingTaskQueue;
 
         Type type_ = Type::TYPE_DEFAULT;
         ScopedMessagePump pump_;
         RunLoop* current_run_loop_ = nullptr;
         IncomingTaskQueue incoming_task_queue_;
         TaskQueue work_queue_;
-        TaskQueue delayed_work_queue_;
+        DelayedTaskQueue delayed_work_queue_;
+        TimeTicks recent_time_;
     };
 }
 
