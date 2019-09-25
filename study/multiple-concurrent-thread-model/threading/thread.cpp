@@ -10,6 +10,11 @@ namespace
         mctm::StdThreadDelegate* thread = static_cast<mctm::StdThreadDelegate*>(params);
         thread->ThreadMain();
     }
+
+    void ThreadQuitHelper()
+    {
+        mctm::MessageLoop::current()->QuitThread();
+    }
 }
 
 namespace mctm
@@ -34,6 +39,7 @@ namespace mctm
 
     Thread::~Thread()
     {
+        Stop();
     }
 
     bool Thread::Start()
@@ -52,6 +58,19 @@ namespace mctm
         }
 
         return thread_.joinable();
+    }
+    
+    void Thread::Stop()
+    {
+        if (message_loop_)
+        {
+            message_loop_->PostTask(FROM_HERE, Bind(ThreadQuitHelper));
+        }
+
+        if (thread_.joinable())
+        {
+            thread_.join();
+        }
     }
 
     void Thread::set_message_loop(MessageLoopRef message_loop)
@@ -79,6 +98,8 @@ namespace mctm
         Run();
 
         CleanUp();
+
+        message_loop_ = nullptr;
     }
 
     void Thread::Init()

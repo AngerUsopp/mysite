@@ -1,5 +1,8 @@
 #include "incoming_task_queue.h"
-#include "message_loop.h"
+
+#include <atomic>
+
+#include "message_loop/message_loop.h"
 
 namespace
 {
@@ -50,6 +53,8 @@ namespace
 
         return delayed_run_time;
     }
+
+    std::atomic_int32_t g_inc_next_sequence_num = 0;
 }
 
 namespace mctm
@@ -68,6 +73,7 @@ namespace mctm
     {
         bool was_empty = true;
         PendingTask pending_task(from_here, task, CalculateDelayedRuntime(delay));
+        pending_task.sequence_num = g_inc_next_sequence_num++;
         {
             std::lock_guard<std::recursive_mutex> lock(incoming_queue_lock_);
             was_empty = incoming_queue_.empty();

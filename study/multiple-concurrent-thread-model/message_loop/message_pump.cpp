@@ -88,10 +88,10 @@ namespace mctm
     {
         while (true)
         {
-            if (delegate_->ShouldQuitCurrentLoop())
+            /*if (delegate_->ShouldQuitCurrentLoop())
             {
                 return;
-            }
+            }*/
 
             bool more_work_is_plausible = ProcessNextWindowsMessage();
             if (delegate_->ShouldQuitCurrentLoop())
@@ -271,9 +271,7 @@ namespace mctm
     {
         if (WM_QUIT == msg.message)
         {
-            // Repost the QUIT message so that it will be retrieved by the primary
-            // GetMessage() loop.
-            delegate_->QuitCurrentLoop();
+            delegate_->QuitLoopRecursive();
             ::PostQuitMessage(static_cast<int>(msg.wParam));
             return false;
         }
@@ -291,16 +289,8 @@ namespace mctm
 
         if (!message_filter_->ProcessMessage(msg))
         {
-            /*if (state_->dispatcher)
-            {
-                if (!state_->dispatcher->Dispatch(msg))
-                    state_->should_quit = true;
-            }
-            else*/
-            {
-                ::TranslateMessage(&msg);
-                ::DispatchMessage(&msg);
-            }
+            ::TranslateMessage(&msg);
+            ::DispatchMessage(&msg);
         }
 
         DidProcessMessage(msg);
@@ -318,16 +308,20 @@ namespace mctm
             return false;
         }
 
+        // 这里是HaveWork消息的处理函数，进来之后往消息队列里再补一个HaveWork消息，
+        // 用以形成task队列处理的自循环
         ScheduleWork();
+
         return ProcessMessageHelper(msg);
     }
     
     void MessagePumpForUI::HandleWorkMessage()
     {
+        // 对HaveWork消息进行处理，里面会尝试响应一个WM_XXX消息，如果存在的话
         ProcessPumpScheduleWorkMessage();
 
-        // Now give the delegate a chance to do some work.  He'll let us know if he
-        // needs to do more work.
+        // 让message_loop处理一下其任务队列的任务，如果此次处理之后还有更多待处理任务，
+        // 那么pump就往消息队列里再补一个HaveWork消息，用以循环处理任务队列
         if (delegate_->DoWork())
         {
             ScheduleWork();
@@ -397,7 +391,7 @@ namespace mctm
                 return;
             }
 
-            more_work_is_plausible |= delegate_->DoDelayedWork();
+            more_work_is_plausible |= delegate_->DoDelayedWork(&delayed_work_time_);
             if (delegate_->ShouldQuitCurrentLoop())
             {
                 return;

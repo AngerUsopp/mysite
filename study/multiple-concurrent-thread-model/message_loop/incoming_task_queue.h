@@ -26,9 +26,6 @@ namespace mctm
 
         std::recursive_mutex incoming_queue_lock_;
         TaskQueue incoming_queue_;
-
-        // The next sequence number to use for delayed tasks.
-        int next_sequence_num_ = 0;
     };
 
 }

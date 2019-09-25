@@ -15,15 +15,17 @@ namespace mctm
             TimeTicks delayed_run_time);
         ~PendingTask();
 
+        // Used to support sorting.
+        bool operator<(const PendingTask& other) const;
+
         Closure task;
         // The site this PendingTask was posted from.
         Location posted_from;
         // Secondary sort key for run time.
-        int sequence_num = 0;
+        int sequence_num = -1;
 
         // Time when the related task was posted.
         TimeTicks time_posted;
-
         // The time when the task should be run.
         TimeTicks delayed_run_time;
     };

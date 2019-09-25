@@ -6,6 +6,8 @@
 #include <windows.h>
 #include <vector>
 #include <iostream>
+#include <algorithm>
+#include <conio.h>
 
 class Pred
 {

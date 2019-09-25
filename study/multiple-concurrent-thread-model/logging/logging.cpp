@@ -12,6 +12,21 @@ namespace
     const char* const log_severity_names[mctm::LOG_NUM_SEVERITIES] = {
         "INFO", "WARNING", "ERROR", "FATAL" 
     };
+
+    bool BeingDebugged()
+    {
+        return ::IsDebuggerPresent() != 0;
+    }
+
+    void BreakDebugger()
+    {
+        /*if (IsDebugUISuppressed())
+            _exit(1);*/
+        __debugbreak();
+#if defined(NDEBUG)
+        _exit(1);
+#endif
+    }
 }
 
 namespace mctm
@@ -41,6 +56,14 @@ namespace mctm
 
         //////////////////////////////////////////////////////////////////////////
         ::OutputDebugStringA(str_newline.c_str());
+
+        if (severity_ == LOG_FATAL)
+        {
+            if (BeingDebugged())
+            {
+                BreakDebugger();
+            }
+        }
     }
 
     void LogMessage::Init()

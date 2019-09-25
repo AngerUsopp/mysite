@@ -56,11 +56,26 @@ namespace mctm
         incoming_task_queue_.AddToIncomingQueue(from_here, task, delay);
     }
 
+    void MessageLoop::PostIdleTask(const Location& from_here, const Closure& task)
+    {
+
+    }
+
     void MessageLoop::Quit()
     {
-        if (current_run_loop_)
+        QuitCurrentLoop();
+    }
+
+    void MessageLoop::QuitThread()
+    {
+        QuitLoopRecursive();
+
+        if (type_ == Type::TYPE_UI)
         {
-            current_run_loop_->Quit();
+            // 除调用mctm自身消息循环机制的退出之外还要再调用系统自身消息循环机制的退出，
+            // 防止当前在mctm的循环里如果正嵌套着系统的消息循环（比如正显示着系统的MesssageBox）
+            // 导致mctm的消息循环无法获得判断自身是否需要退出的时机从而导致线程无法优雅退出的问题
+            ::PostQuitMessage(0);
         }
     }
 
@@ -71,7 +86,15 @@ namespace mctm
 
     void MessageLoop::QuitCurrentLoop()
     {
-        Quit();
+        if (current_run_loop_)
+        {
+            current_run_loop_->Quit();
+        }
+    }
+
+    void MessageLoop::QuitLoopRecursive()
+    {
+        quit_thread_ = true;
     }
 
     void MessageLoop::ReloadWorkQueue()
@@ -118,6 +141,11 @@ namespace mctm
 
     bool MessageLoop::ShouldQuitCurrentLoop()
     {
+        if (quit_thread_)
+        {
+            return true;
+        }
+
         if (current_run_loop_)
         {
             return current_run_loop_->quitted();
@@ -127,11 +155,21 @@ namespace mctm
 
     bool MessageLoop::DoWork()
     {
-        if (!ShouldQuitCurrentLoop())
+        // 外面这层无限循环是为了防止如果当前任务队列中全是计时任务的话，
+        // 那么要确保此次DoWork要把全部的计时任务都取到，
+        // 比如第一次循环取了计时任务之后，另外一条线程又插了新的计时任务进来，
+        // 那么通过第二次循环把这个新增的计时任务再取出来，用以及时的开启计时任务的
+        // 计时逻辑，提高计时任务的精度
+        while (true)
         {
             // 从互斥锁保护的任务队列中一次性把任务提取出来
             ReloadWorkQueue();
-            while (!work_queue_.empty())
+            if (work_queue_.empty())
+            {
+                break;
+            }
+
+            do
             {
                 PendingTask pending_task = work_queue_.front();
                 work_queue_.pop();
@@ -155,59 +193,60 @@ namespace mctm
                         return true;
                     }
                 }
-            }
+            } while (!work_queue_.empty());
         }
         return false;
     }
 
     bool MessageLoop::DoDelayedWork(TimeTicks* next_delayed_work_time)
     {
-        if (!ShouldQuitCurrentLoop())
+        if (delayed_work_queue_.empty())
         {
-            if (delayed_work_queue_.empty())
-            {
-                recent_time_ = *next_delayed_work_time = TimeTicks();
-                return false;
-            }
+            recent_time_ = *next_delayed_work_time = TimeTicks();
+            return false;
+        }
 
-            // When we "fall behind," there will be a lot of tasks in the delayed work
-            // queue that are ready to run.  To increase efficiency when we fall behind,
-            // we will only call Time::Now() intermittently, and then process all tasks
-            // that are ready to run before calling it again.  As a result, the more we
-            // fall behind (and have a lot of ready-to-run delayed tasks), the more
-            // efficient we'll be at handling the tasks.
+        // When we "fall behind," there will be a lot of tasks in the delayed work
+        // queue that are ready to run.  To increase efficiency when we fall behind,
+        // we will only call Time::Now() intermittently, and then process all tasks
+        // that are ready to run before calling it again.  As a result, the more we
+        // fall behind (and have a lot of ready-to-run delayed tasks), the more
+        // efficient we'll be at handling the tasks.
 
-            TimeTicks next_run_time = delayed_work_queue_.top().delayed_run_time;
+        TimeTicks next_run_time = delayed_work_queue_.top().delayed_run_time;
+        if (next_run_time > recent_time_)
+        {
+            recent_time_ = TimeTicks::Now();
             if (next_run_time > recent_time_)
             {
-                recent_time_ = TimeTicks::Now();
-                if (next_run_time > recent_time_)
-                {
-                    *next_delayed_work_time = next_run_time;
-                    return false;
-                }
+                *next_delayed_work_time = next_run_time;
+                return false;
             }
-
-            PendingTask pending_task = delayed_work_queue_.top();
-            delayed_work_queue_.pop();
-
-            if (!delayed_work_queue_.empty())
-            {
-                *next_delayed_work_time = delayed_work_queue_.top().delayed_run_time;
-            }
-
-            return DeferOrRunPendingTask(pending_task);
         }
-        return false;
+
+        PendingTask pending_task = delayed_work_queue_.top();
+        delayed_work_queue_.pop();
+
+        if (!delayed_work_queue_.empty())
+        {
+            *next_delayed_work_time = delayed_work_queue_.top().delayed_run_time;
+        }
+
+        return DeferOrRunPendingTask(pending_task);
     }
 
     bool MessageLoop::DoIdleWord()
     {
-        if (!ShouldQuitCurrentLoop())
+        if (idle_work_queue_.empty())
         {
-            //////////////////////////////////////////////////////////////////////////
+            return false;
         }
-        return false;
+
+        PendingTask pending_task = idle_work_queue_.front();
+        idle_work_queue_.pop();
+
+        RunTask(pending_task);
+        return true;
     }
 
 }

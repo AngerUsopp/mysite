@@ -35,7 +35,11 @@ namespace mctm
             const Closure& task,
             TimeDelta delay);
 
+        void PostIdleTask(const Location& from_here,
+            const Closure& task);
+
         void Quit();
+        void QuitThread();
         
     protected:
         // MessagePump::Delegate
@@ -44,6 +48,7 @@ namespace mctm
         bool DoDelayedWork(TimeTicks* next_delayed_work_time) override;
         bool DoIdleWord() override;
         void QuitCurrentLoop() override;
+        void QuitLoopRecursive() override;
 
     private:
         void DoRunLoop();
@@ -66,8 +71,10 @@ namespace mctm
         RunLoop* current_run_loop_ = nullptr;
         IncomingTaskQueue incoming_task_queue_;
         TaskQueue work_queue_;
+        TaskQueue idle_work_queue_;
         DelayedTaskQueue delayed_work_queue_;
         TimeTicks recent_time_;
+        bool quit_thread_ = false;
     };
 }
 

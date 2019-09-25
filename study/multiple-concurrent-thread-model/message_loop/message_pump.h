@@ -34,6 +34,12 @@ namespace mctm
             // Returns:   退出当前消息循环
             //************************************
             virtual void QuitCurrentLoop() = 0;
+
+            //************************************
+            // Method:    QuitLoopRecursive
+            // Returns:   结束线程，递归退出全部嵌套的消息循环
+            //************************************
+            virtual void QuitLoopRecursive() = 0;
         };
 
         explicit MessagePump(Delegate* delegate)
@@ -109,6 +115,7 @@ namespace mctm
         void WaitForWork();
 
     private:
+        TimeTicks delayed_work_time_;
     };
 }
 
