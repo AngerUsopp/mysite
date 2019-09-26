@@ -37,6 +37,7 @@ namespace mctm
             pump_.reset(new MessagePumpForUI(this));
         	break;
         default:
+            pump_.reset(new MessagePumpForUI(this));
             break;
         }
     }
@@ -94,7 +95,7 @@ namespace mctm
 
     void MessageLoop::QuitLoopRecursive()
     {
-        quit_thread_ = true;
+        thorough_quit_run_loop_ = true;
     }
 
     void MessageLoop::ReloadWorkQueue()
@@ -141,7 +142,7 @@ namespace mctm
 
     bool MessageLoop::ShouldQuitCurrentLoop()
     {
-        if (quit_thread_)
+        if (thorough_quit_run_loop_)
         {
             return true;
         }

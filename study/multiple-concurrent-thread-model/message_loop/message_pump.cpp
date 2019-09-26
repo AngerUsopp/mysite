@@ -31,6 +31,94 @@ namespace
 
 namespace mctm
 {
+    // MessagePump
+    MessagePump::MessagePump(Delegate* delegate)
+        : delegate_(delegate)
+    {
+    }
+
+    int MessagePump::GetCurrentDelay() const
+    {
+        if (delayed_work_time_.is_null())
+        {
+            return -1;
+        }
+
+        // Be careful here.  TimeDelta has a precision of microseconds, but we want a
+        // value in milliseconds.  If there are 5.5ms left, should the delay be 5 or
+        // 6?  It should be 6 to avoid executing delayed work too early.
+        double timeout =
+            ceil((delayed_work_time_ - TimeTicks::Now()).InMillisecondsF());
+
+        // If this value is negative, then we need to run delayed work soon.
+        int delay = static_cast<int>(timeout);
+        if (delay < 0)
+        {
+            delay = 0;
+        }
+
+        return delay;
+    }
+
+
+    // MessagePumpDefault
+    MessagePumpDefault::MessagePumpDefault(Delegate* delegate)
+        : MessagePump(delegate)
+    {
+    }
+
+    MessagePumpDefault::~MessagePumpDefault()
+    {
+    }
+
+    void MessagePumpDefault::DoRunLoop()
+    {
+        while (true)
+        {
+            bool more_work_is_plausible = true;
+
+            more_work_is_plausible |= delegate_->DoWork();
+            if (delegate_->ShouldQuitCurrentLoop())
+            {
+                return;
+            }
+
+            more_work_is_plausible |= delegate_->DoDelayedWork(&delayed_work_time_);
+            if (delegate_->ShouldQuitCurrentLoop())
+            {
+                return;
+            }
+
+            if (more_work_is_plausible)
+            {
+                continue;
+            }
+
+            more_work_is_plausible |= delegate_->DoIdleWord();
+            if (delegate_->ShouldQuitCurrentLoop())
+            {
+                return;
+            }
+
+            if (more_work_is_plausible)
+            {
+                continue;
+            }
+
+            WaitForWork();
+        }
+    }
+
+    void MessagePumpDefault::ScheduleWork()
+    {
+    }
+
+    void MessagePumpDefault::ScheduleDelayedWork(const TimeTicks& delayed_work_time)
+    {
+        delayed_work_time_ = delayed_work_time;
+    }
+
+
     // MessagePumpForUI
     LRESULT CALLBACK MessagePumpForUI::WndProcThunk(
         HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
@@ -226,29 +314,6 @@ namespace mctm
         //DCHECK_NE(WAIT_FAILED, result) << GetLastError();
     }
     
-    int MessagePumpForUI::GetCurrentDelay() const
-    {
-        if (delayed_work_time_.is_null())
-        {
-            return -1;
-        }
-
-        // Be careful here.  TimeDelta has a precision of microseconds, but we want a
-        // value in milliseconds.  If there are 5.5ms left, should the delay be 5 or
-        // 6?  It should be 6 to avoid executing delayed work too early.
-        double timeout =
-            ceil((delayed_work_time_ - TimeTicks::Now()).InMillisecondsF());
-
-        // If this value is negative, then we need to run delayed work soon.
-        int delay = static_cast<int>(timeout);
-        if (delay < 0)
-        {
-            delay = 0;
-        }
-
-        return delay;
-    }
-
     bool MessagePumpForUI::ProcessNextWindowsMessage()
     {
         bool sent_messages_in_queue = false;

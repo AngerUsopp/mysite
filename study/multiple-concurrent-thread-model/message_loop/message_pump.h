@@ -42,8 +42,7 @@ namespace mctm
             virtual void QuitLoopRecursive() = 0;
         };
 
-        explicit MessagePump(Delegate* delegate)
-            : delegate_(delegate){ }
+        explicit MessagePump(Delegate* delegate);
         virtual ~MessagePump() = default;
 
         virtual void DoRunLoop() = 0;
@@ -51,7 +50,26 @@ namespace mctm
         virtual void ScheduleDelayedWork(const TimeTicks& delayed_work_time) = 0;
 
     protected:
+        int GetCurrentDelay() const;
+
+    protected:
         Delegate* delegate_ = nullptr;
+        TimeTicks delayed_work_time_;
+    };
+
+    class MessagePumpDefault : public MessagePump
+    {
+    public:
+        explicit MessagePumpDefault(Delegate* delegate);
+        virtual ~MessagePumpDefault();
+
+    protected:
+        // MessagePump
+        void DoRunLoop() override;
+        void ScheduleWork() override;
+        void ScheduleDelayedWork(const TimeTicks& delayed_work_time) override;
+
+    private:
     };
 
     class MessagePumpForUI : public MessagePump
@@ -91,13 +109,11 @@ namespace mctm
         bool ProcessPumpScheduleWorkMessage();
         void HandleWorkMessage();
         void HandleTimerMessage();
-        int GetCurrentDelay() const;
 
     private:
         std::shared_ptr<MessageFilter> message_filter_;
         ATOM atom_ = 0;
         HWND message_hwnd_ = nullptr;
-        TimeTicks delayed_work_time_;
     };
 
     class MessagePumpForIO : public MessagePump
@@ -115,7 +131,6 @@ namespace mctm
         void WaitForWork();
 
     private:
-        TimeTicks delayed_work_time_;
     };
 }
 

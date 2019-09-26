@@ -22,8 +22,7 @@ namespace
 
 void mctm_example()
 {
-    DCHECK(false) << "mctm_example";
-
+    DLOG(ERROR) << "mctm_example";
     /*std::unique_ptr<mctm::Thread> thread = mctm::Thread::AttachCurrentThread("main_mctm_thread", mctm::MessageLoop::Type::TYPE_UI);
     if (thread)
     {

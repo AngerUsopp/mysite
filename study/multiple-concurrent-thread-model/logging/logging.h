@@ -7,11 +7,18 @@ namespace mctm
 {
     enum LogSeverity
     {
+#define LOG_LEVEL_DEF(name, lv)\
+    name = lv, \
+    LOG_##name = lv,
+        
         LOG_VERBOSE = -1,
-        LOG_INFO = 0,
-        LOG_WARNING = 1,
+
+        LOG_LEVEL_DEF(INFO, 0)
+        LOG_LEVEL_DEF(WARNING, 1)
         LOG_ERROR = 2,
-        LOG_FATAL = 3,
+        LOG_0 = LOG_ERROR,
+        LOG_LEVEL_DEF(FATAL, 3)
+
         LOG_NUM_SEVERITIES = 4,
     };
 
@@ -55,28 +62,53 @@ namespace mctm
         // higher than ?:
         void operator&(std::ostream&) {}
     };
+
+    LogSeverity GetMinLogLevel();
 }
 
 #ifndef DCHECK
 
+#define LOG_IS_ON(severity) \
+  ((mctm::LogSeverity::LOG_##severity) >= mctm::GetMinLogLevel())
+
 #if defined(_DEBUG) || defined(DEBUG)
 #define DCHECK_IS_ON() 1
+#define DLOG_IS_ON(severity) LOG_IS_ON(severity)
 #else
 #define DCHECK_IS_ON() 0
+#define DLOG_IS_ON(severity) 0
 #endif
 
-#define COMPACT_MCTM_LOG_FATAL(ClassName, ...)\
-    mctm::ClassName(__FILE__, __LINE__, mctm::LOG_FATAL, ##__VA_ARGS__)
+#define COMPACT_MCTM_LOG_INFO_VA(ClassName, ...)\
+    mctm::ClassName(__FILE__, __LINE__, mctm::LogSeverity::LOG_INFO, ##__VA_ARGS__)
+#define COMPACT_MCTM_LOG_WARNING_VA(ClassName, ...)\
+    mctm::ClassName(__FILE__, __LINE__, mctm::LogSeverity::LOG_WARNING, ##__VA_ARGS__)
+#define COMPACT_MCTM_LOG_ERROR_VA(ClassName, ...)\
+    mctm::ClassName(__FILE__, __LINE__, mctm::LogSeverity::LOG_ERROR, ##__VA_ARGS__)
+#define COMPACT_MCTM_LOG_FATAL_VA(ClassName, ...)\
+    mctm::ClassName(__FILE__, __LINE__, mctm::LogSeverity::LOG_FATAL, ##__VA_ARGS__)
 
-#define COMPACT_MCTM_LOG_DCHECK COMPACT_MCTM_LOG_FATAL(LogMessage)
+#define COMPACT_MCTM_LOG_DCHECK COMPACT_MCTM_LOG_FATAL_VA(LogMessage)
+#define COMPACT_MCTM_LOG_INFO COMPACT_MCTM_LOG_INFO_VA(LogMessage)
+#define COMPACT_MCTM_LOG_WARNING COMPACT_MCTM_LOG_WARNING_VA(LogMessage)
+#define COMPACT_MCTM_LOG_ERROR COMPACT_MCTM_LOG_ERROR_VA(LogMessage)
+#define COMPACT_MCTM_LOG_FATAL COMPACT_MCTM_LOG_FATAL_VA(LogMessage)
+#define COMPACT_MCTM_LOG_0 COMPACT_MCTM_LOG_ERROR
 
 #define LOG_STREAM(severity) COMPACT_MCTM_LOG_##severity.stream()
 
 #define LAZY_STREAM(stream, condition) \
     !(condition) ? (void)0 : mctm::LogMessageVoidify() & (stream)
 
+// check
 #define DCHECK(condition)                                         \
     LAZY_STREAM(LOG_STREAM(DCHECK), DCHECK_IS_ON() && !(condition)) \
     << "Check failed: " #condition ". "
+
+#define NOTREACHED() DCHECK(false)
+
+// log
+#define DLOG(severity)                                          \
+    LAZY_STREAM(LOG_STREAM(severity), DLOG_IS_ON(severity))
 
 #endif

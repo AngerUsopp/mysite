@@ -19,8 +19,8 @@ namespace mctm
         enum class Type
         {
             TYPE_DEFAULT,
-            TYPE_IO = TYPE_DEFAULT,
             TYPE_UI,
+            TYPE_IO,
         };
 
         static MessageLoopRef current();
@@ -74,7 +74,7 @@ namespace mctm
         TaskQueue idle_work_queue_;
         DelayedTaskQueue delayed_work_queue_;
         TimeTicks recent_time_;
-        bool quit_thread_ = false;
+        bool thorough_quit_run_loop_ = false;
     };
 }
 

@@ -99,4 +99,9 @@ namespace mctm
         stream_ << ":" << filename << "(" << line_ << ")] ";
     }
 
+    LogSeverity GetMinLogLevel()
+    {
+        return LogSeverity::LOG_INFO;
+    }
+
 }
