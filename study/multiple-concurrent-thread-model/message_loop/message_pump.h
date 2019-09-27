@@ -4,8 +4,9 @@
 #include <WinUser.h>
 
 #include "data_encapsulation/smart_pointer.h"
-#include "time/time_util.h"
+#include "iocp/iocp.h"
 #include "synchronization/waitable_event.h"
+#include "time/time_util.h"
 
 namespace mctm
 {
@@ -130,7 +131,20 @@ namespace mctm
     class MessagePumpForIO : public MessagePump
     {
     public:
+        using IOContext = OVERLAPPED;
+
+        class IOHandler
+        {
+        public:
+            virtual ~IOHandler() {}
+
+            virtual void OnIOCompleted(IOContext* context, DWORD bytes_transfered,
+                DWORD error) = 0;
+        };
+
         explicit MessagePumpForIO(MessagePump::Delegate* delegate);
+
+        void RegisterIOHandler(HANDLE file_handle, IOHandler* handler);
 
     protected:
         // MessagePump
@@ -140,9 +154,11 @@ namespace mctm
 
     private:
         void WaitForWork();
+        bool WaitForIOCompletion(DWORD timeout);
+        bool ProcessInternalIOItem(const IOCP::IOItem& item);
 
     private:
-        ScopedHandle iocp_;
+        IOCP iocp_;
     };
 }
 

@@ -133,7 +133,7 @@ namespace mctm
             {
                 event_.TimedWait(timewait);
             }
-            else
+            else // timewait == 0
             {
                 // It looks like delayed_work_time_ indicates a time in the past, so we
                 // need to call DoDelayedWork now.
@@ -306,7 +306,9 @@ namespace mctm
         // manager to fire the next set of timers.
         int delay = GetCurrentDelay();
         if (delay < 0)  // Negative value means no timers waiting.
+        {
             delay = INFINITE;
+        }
 
         DWORD result;
         result = ::MsgWaitForMultipleObjectsEx(0, NULL, delay, QS_ALLINPUT,
@@ -465,17 +467,27 @@ namespace mctm
     // MessagePumpForIO
     MessagePumpForIO::MessagePumpForIO(MessagePump::Delegate* delegate)
         : MessagePump(delegate)
+        , iocp_(1)
     {
-        iocp_.SetHandle(::CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 1));
+    }
+
+    void MessagePumpForIO::RegisterIOHandler(HANDLE file_handle, IOHandler* handler)
+    {
+        bool ret = iocp_.RegisterIOHandle(file_handle, reinterpret_cast<ULONG_PTR>(handler));
+        DCHECK(ret);
     }
 
     void MessagePumpForIO::DoRunLoop()
     {
         while (true)
         {
-            bool more_work_is_plausible = true;
+            bool more_work_is_plausible = delegate_->DoWork();
+            if (delegate_->ShouldQuitCurrentLoop())
+            {
+                return;
+            }
 
-            more_work_is_plausible |= delegate_->DoWork();
+            more_work_is_plausible |= WaitForIOCompletion(0);
             if (delegate_->ShouldQuitCurrentLoop())
             {
                 return;
@@ -521,6 +533,45 @@ namespace mctm
 
     void MessagePumpForIO::WaitForWork()
     {
+        int timeout = GetCurrentDelay();
+        if (timeout < 0)  // Negative value means no timers waiting.
+        {
+            timeout = INFINITE;
+        }
+
+        WaitForIOCompletion(timeout);
     }
 
+    bool MessagePumpForIO::WaitForIOCompletion(DWORD timeout)
+    {
+        IOCP::IOItem item;
+        if (!iocp_.GetIOItem(timeout, &item))
+        {
+            return false;
+        }
+
+        if (ProcessInternalIOItem(item))
+        {
+            return true;
+        }
+
+        // deal
+        //WillProcessIOEvent();
+        reinterpret_cast<IOHandler*>(item.key)->
+            OnIOCompleted(item.overlapped, item.bytes_transfered, item.error);
+        //DidProcessIOEvent();
+
+        return true;
+    }
+
+    bool MessagePumpForIO::ProcessInternalIOItem(const IOCP::IOItem& item)
+    {
+        if (this == reinterpret_cast<MessagePumpForIO*>(item.key) &&
+            this == reinterpret_cast<MessagePumpForIO*>(item.overlapped))
+        {
+            // This is our internal completion.
+            return true;
+        }
+        return false;
+    }
 }

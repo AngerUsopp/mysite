@@ -37,6 +37,15 @@
     <Filter Include="message_loop">
       <UniqueIdentifier>{635946f2-6cc5-4bf8-82e8-13c31041f1ee}</UniqueIdentifier>
     </Filter>
+    <Filter Include="net">
+      <UniqueIdentifier>{cc58c893-466c-404f-91ed-78051288c5a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net\socket">
+      <UniqueIdentifier>{6c63f262-39ab-4e22-8468-b7d518e2fe00}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="net\pipe">
+      <UniqueIdentifier>{805c42d1-9482-4239-b8ae-050c8fbe7df0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -87,6 +96,12 @@
     <ClInclude Include="message_loop\incoming_task_queue.h">
       <Filter>message_loop</Filter>
     </ClInclude>
+    <ClInclude Include="net\socket\server_socket.h">
+      <Filter>net\socket</Filter>
+    </ClInclude>
+    <ClInclude Include="net\io_buffer_pool.h">
+      <Filter>net</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -130,6 +145,12 @@
     </ClCompile>
     <ClCompile Include="message_loop\incoming_task_queue.cpp">
       <Filter>message_loop</Filter>
+    </ClCompile>
+    <ClCompile Include="net\socket\server_socket.cpp">
+      <Filter>net\socket</Filter>
+    </ClCompile>
+    <ClCompile Include="net\io_buffer_pool.cpp">
+      <Filter>net</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
