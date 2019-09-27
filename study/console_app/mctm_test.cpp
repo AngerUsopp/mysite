@@ -30,16 +30,16 @@ void mctm_example()
         run_loop.Run();
     }*/
 
-    mctm::Thread io_thread("mctm_ui_thread");
+    mctm::Thread thread("mctm_def_thread");
     mctm::Thread::Options option;
-    option.type = mctm::MessageLoop::Type::TYPE_UI;
-    io_thread.StartWithOptions(option);
+    //option.type = mctm::MessageLoop::Type::TYPE_UI;
+    thread.StartWithOptions(option);
 
     while (::_getch() != VK_ESCAPE)
     {
-        io_thread.message_loop()->PostTask(FROM_HERE, mctm::Bind(GlobalFunction, "mctm_ui_thread post task"));
-        io_thread.message_loop()->PostDelayedTask(FROM_HERE, 
-            mctm::Bind(GlobalFunction, "mctm_ui_thread post delayed task"),
+        thread.message_loop()->PostTask(FROM_HERE, mctm::Bind(GlobalFunction, "mctm_thread post task"));
+        thread.message_loop()->PostDelayedTask(FROM_HERE,
+            mctm::Bind(GlobalFunction, "mctm_thread post delayed task"),
             mctm::TimeDelta::FromMilliseconds(2000));
     }
 }

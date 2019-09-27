@@ -3,10 +3,14 @@
 #include <windef.h>
 #include <WinUser.h>
 
+#include "data_encapsulation/smart_pointer.h"
 #include "time/time_util.h"
+#include "synchronization/waitable_event.h"
 
 namespace mctm
 {
+    class WaitableEvent;
+
     class MessagePump
     {
     public:
@@ -57,6 +61,7 @@ namespace mctm
         TimeTicks delayed_work_time_;
     };
 
+    // 以Event为信号点进行循环的泵
     class MessagePumpDefault : public MessagePump
     {
     public:
@@ -70,8 +75,13 @@ namespace mctm
         void ScheduleDelayedWork(const TimeTicks& delayed_work_time) override;
 
     private:
+        void WaitForWork();
+
+    private:
+        WaitableEvent event_;
     };
 
+    // 以系统消息（GetMessage/PeekMessage）为信号点进行循环的泵
     class MessagePumpForUI : public MessagePump
     {
     public:
@@ -116,6 +126,7 @@ namespace mctm
         HWND message_hwnd_ = nullptr;
     };
 
+    // 以I/O完成端口（IOCP）为信号点进行循环的泵
     class MessagePumpForIO : public MessagePump
     {
     public:
@@ -131,6 +142,7 @@ namespace mctm
         void WaitForWork();
 
     private:
+        ScopedHandle iocp_;
     };
 }
 

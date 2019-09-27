@@ -64,6 +64,7 @@ namespace mctm
     // MessagePumpDefault
     MessagePumpDefault::MessagePumpDefault(Delegate* delegate)
         : MessagePump(delegate)
+        , event_(false, false)
     {
     }
 
@@ -111,11 +112,34 @@ namespace mctm
 
     void MessagePumpDefault::ScheduleWork()
     {
+        event_.Signal();
     }
 
     void MessagePumpDefault::ScheduleDelayedWork(const TimeTicks& delayed_work_time)
     {
         delayed_work_time_ = delayed_work_time;
+    }
+
+    void MessagePumpDefault::WaitForWork()
+    {
+        if (delayed_work_time_.is_null())
+        {
+            event_.Wait();
+        }
+        else
+        {
+            int timewait = GetCurrentDelay();
+            if (timewait > 0)
+            {
+                event_.TimedWait(timewait);
+            }
+            else
+            {
+                // It looks like delayed_work_time_ indicates a time in the past, so we
+                // need to call DoDelayedWork now.
+                delayed_work_time_ = TimeTicks();
+            }
+        }        
     }
 
 
@@ -442,6 +466,7 @@ namespace mctm
     MessagePumpForIO::MessagePumpForIO(MessagePump::Delegate* delegate)
         : MessagePump(delegate)
     {
+        iocp_.SetHandle(::CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 1));
     }
 
     void MessagePumpForIO::DoRunLoop()
@@ -484,17 +509,18 @@ namespace mctm
     
     void MessagePumpForIO::ScheduleWork()
     {
+        BOOL ret = ::PostQueuedCompletionStatus(iocp_, 0,
+            reinterpret_cast<ULONG_PTR>(this),
+            reinterpret_cast<OVERLAPPED*>(this));
+        DCHECK(ret);
     }
 
     void MessagePumpForIO::ScheduleDelayedWork(const TimeTicks& delayed_work_time)
     {
-
     }
 
     void MessagePumpForIO::WaitForWork()
     {
-        ::Sleep(100);
     }
-
 
 }

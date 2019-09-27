@@ -37,7 +37,7 @@ namespace mctm
             pump_.reset(new MessagePumpForUI(this));
         	break;
         default:
-            pump_.reset(new MessagePumpForUI(this));
+            pump_.reset(new MessagePumpDefault(this));
             break;
         }
     }
