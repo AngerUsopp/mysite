@@ -250,4 +250,54 @@ namespace mctm
         return true;
     }
 
+
+    // MessageLoopForUI
+    MessageLoopForUIRef MessageLoopForUI::current()
+    {
+        MessageLoopRef loop = MessageLoop::current();
+        if (loop)
+        {
+            if (loop->type() == MessageLoop::Type::TYPE_UI)
+            {
+                return MessageLoopForUIRef(static_cast<MessageLoopForUI*>(loop.get()));
+            }
+        }
+        return nullptr;
+    }
+
+    MessagePumpForUI* MessageLoopForUI::pump_ui()
+    {
+        return static_cast<MessagePumpForUI*>(pump_.get());
+    }
+
+
+    // MessageLoopForIO
+    MessageLoopForIORef MessageLoopForIO::current()
+    {
+        MessageLoopRef loop = MessageLoop::current();
+        if (loop)
+        {
+            if (loop->type() == MessageLoop::Type::TYPE_IO)
+            {
+                return MessageLoopForIORef(static_cast<MessageLoopForIO*>(loop.get()));
+            }
+        }
+        return nullptr;
+    }
+
+    bool MessageLoopForIO::RegisterIOHandler(HANDLE file_handle, MessagePumpForIO::IOHandler* handler)
+    {
+        return pump_io()->RegisterIOHandler(file_handle, handler);
+    }
+
+    bool MessageLoopForIO::RegisterJobObject(HANDLE job_handle, MessagePumpForIO::IOHandler* handler)
+    {
+        return pump_io()->RegisterJobObject(job_handle, handler);
+    }
+
+    MessagePumpForIO* MessageLoopForIO::pump_io()
+    {
+        return static_cast<MessagePumpForIO*>(pump_.get());
+    }
+
 }

@@ -169,6 +169,7 @@
     <ClInclude Include="message_loop\pending_task.h" />
     <ClInclude Include="message_loop\run_loop.h" />
     <ClInclude Include="net\io_buffer_pool.h" />
+    <ClInclude Include="net\pipe\pipe.h" />
     <ClInclude Include="net\socket\server_socket.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="synchronization\waitable_event.h" />
@@ -220,6 +221,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="net\pipe\pipe.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="net\socket\server_socket.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>

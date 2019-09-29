@@ -6,19 +6,10 @@
 
 namespace mctm
 {
-    enum AsyncType
-    {
-        // PIPE
-        Pipe_Listen,
-        Pipe_Connect,
-        PipeFile_Read,
-        PipeFile_Write,
-    };
+    static const int kIOBufferSize = 4096;
 
     struct IOBuffer
     {
-        static const int kBufferSize = 4096;
-
         IOBuffer()
         {
             Reset();
@@ -26,11 +17,11 @@ namespace mctm
 
         void Reset()
         {
-            memset(buffer, 0, kBufferSize);
+            memset(buffer, 0, kIOBufferSize);
         }
 
-        char buffer[kBufferSize];
-        int len = kBufferSize;
+        char buffer[kIOBufferSize];
+        int len = kIOBufferSize;
     };
     using ScopedIOBuffer = std::unique_ptr<IOBuffer>;
 

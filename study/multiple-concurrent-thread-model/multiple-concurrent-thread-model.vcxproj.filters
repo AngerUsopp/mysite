@@ -102,6 +102,9 @@
     <ClInclude Include="net\io_buffer_pool.h">
       <Filter>net</Filter>
     </ClInclude>
+    <ClInclude Include="net\pipe\pipe.h">
+      <Filter>net\pipe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -151,6 +154,9 @@
     </ClCompile>
     <ClCompile Include="net\io_buffer_pool.cpp">
       <Filter>net</Filter>
+    </ClCompile>
+    <ClCompile Include="net\pipe\pipe.cpp">
+      <Filter>net\pipe</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

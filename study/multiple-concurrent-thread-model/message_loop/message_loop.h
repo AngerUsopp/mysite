@@ -28,6 +28,8 @@ namespace mctm
         explicit MessageLoop(Type type);
         ~MessageLoop();
 
+        Type type() const { return type_; }
+
         void PostTask(const Location& from_here,
             const Closure& task);
 
@@ -62,12 +64,14 @@ namespace mctm
         void set_run_loop(RunLoop* run_loop);
         RunLoop* current_run_loop();
 
+    protected:
+        ScopedMessagePump pump_;
+
     private:
         friend class RunLoop;
         friend class IncomingTaskQueue;
 
         Type type_ = Type::TYPE_DEFAULT;
-        ScopedMessagePump pump_;
         RunLoop* current_run_loop_ = nullptr;
         IncomingTaskQueue incoming_task_queue_;
         TaskQueue work_queue_;
@@ -75,6 +79,29 @@ namespace mctm
         DelayedTaskQueue delayed_work_queue_;
         TimeTicks recent_time_;
         bool thorough_quit_run_loop_ = false;
+    };
+
+    class MessageLoopForUI : public MessageLoop
+    {
+    public:
+        static MessageLoopForUIRef current();
+
+    protected:
+        MessagePumpForUI* pump_ui();
+
+    private:
+    };
+
+    class MessageLoopForIO : public MessageLoop
+    {
+    public:
+        static MessageLoopForIORef current();
+
+        bool RegisterIOHandler(HANDLE file_handle, MessagePumpForIO::IOHandler* handler);
+        bool RegisterJobObject(HANDLE job_handle, MessagePumpForIO::IOHandler* handler);
+
+    protected:
+        MessagePumpForIO* pump_io();
     };
 }
 
