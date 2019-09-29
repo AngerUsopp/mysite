@@ -50,8 +50,32 @@ namespace mctm
         explicit MessagePump(Delegate* delegate);
         virtual ~MessagePump() = default;
 
+        //************************************
+        // Method:    DoRunLoop
+        // FullName:  mctm::MessagePump::DoRunLoop
+        // Access:    virtual public 
+        // Returns:   void
+        // Remark:    无限循环的主函数
+        //************************************
         virtual void DoRunLoop() = 0;
+
+        //************************************
+        // Method:    ScheduleWork
+        // FullName:  mctm::MessagePump::ScheduleWork
+        // Access:    virtual public 
+        // Returns:   void
+        // Remark:    新任务到来之后通知循环结束等待，快速进行新一轮循环以便及时处理新任务
+        //************************************
         virtual void ScheduleWork() = 0;
+
+        //************************************
+        // Method:    ScheduleDelayedWork
+        // FullName:  mctm::MessagePump::ScheduleDelayedWork
+        // Access:    virtual public 
+        // Returns:   void
+        // Parameter: const TimeTicks & delayed_work_time
+        // Remark:    通知循环泵以指定的时间节点（delayed_work_time）进行循环信号等待
+        //************************************
         virtual void ScheduleDelayedWork(const TimeTicks& delayed_work_time) = 0;
 
     protected:
@@ -144,7 +168,8 @@ namespace mctm
 
         explicit MessagePumpForIO(MessagePump::Delegate* delegate);
 
-        void RegisterIOHandler(HANDLE file_handle, IOHandler* handler);
+        bool RegisterIOHandler(HANDLE file_handle, IOHandler* handler);
+        bool RegisterJobObject(HANDLE job_handle, IOHandler* handler);
 
     protected:
         // MessagePump
@@ -156,6 +181,8 @@ namespace mctm
         void WaitForWork();
         bool WaitForIOCompletion(DWORD timeout);
         bool ProcessInternalIOItem(const IOCP::IOItem& item);
+        void WillProcessIOEvent();
+        void DidProcessIOEvent();
 
     private:
         IOCP iocp_;

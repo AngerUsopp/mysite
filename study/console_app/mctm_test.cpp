@@ -32,7 +32,7 @@ void mctm_example()
 
     mctm::Thread thread("mctm_def_thread");
     mctm::Thread::Options option;
-    //option.type = mctm::MessageLoop::Type::TYPE_UI;
+    option.type = mctm::MessageLoop::Type::TYPE_IO;
     thread.StartWithOptions(option);
 
     while (::_getch() != VK_ESCAPE)

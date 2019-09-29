@@ -471,10 +471,28 @@ namespace mctm
     {
     }
 
-    void MessagePumpForIO::RegisterIOHandler(HANDLE file_handle, IOHandler* handler)
+    bool MessagePumpForIO::RegisterIOHandler(HANDLE file_handle, IOHandler* handler)
     {
         bool ret = iocp_.RegisterIOHandle(file_handle, reinterpret_cast<ULONG_PTR>(handler));
         DCHECK(ret);
+        return ret;
+    }
+
+    bool MessagePumpForIO::RegisterJobObject(HANDLE job_handle, IOHandler* handler)
+    {
+        // Job object notifications use the OVERLAPPED pointer to carry the message
+        // data. Mark the completion key correspondingly, so we will not try to
+        // convert OVERLAPPED* to IOContext*.
+        ULONG_PTR key = reinterpret_cast<ULONG_PTR>(handler);
+        JOBOBJECT_ASSOCIATE_COMPLETION_PORT info;
+        info.CompletionKey = reinterpret_cast<void*>(key);
+        info.CompletionPort = iocp_;
+        bool ret = SetInformationJobObject(job_handle,
+            JobObjectAssociateCompletionPortInformation,
+            &info,
+            sizeof(info)) != FALSE;
+        DCHECK(ret);
+        return ret;
     }
 
     void MessagePumpForIO::DoRunLoop()
@@ -529,6 +547,7 @@ namespace mctm
 
     void MessagePumpForIO::ScheduleDelayedWork(const TimeTicks& delayed_work_time)
     {
+        delayed_work_time_ = delayed_work_time;
     }
 
     void MessagePumpForIO::WaitForWork()
@@ -556,10 +575,10 @@ namespace mctm
         }
 
         // deal
-        //WillProcessIOEvent();
+        WillProcessIOEvent();
         reinterpret_cast<IOHandler*>(item.key)->
             OnIOCompleted(item.overlapped, item.bytes_transfered, item.error);
-        //DidProcessIOEvent();
+        DidProcessIOEvent();
 
         return true;
     }
@@ -574,4 +593,13 @@ namespace mctm
         }
         return false;
     }
+
+    void MessagePumpForIO::WillProcessIOEvent()
+    {
+    }
+
+    void MessagePumpForIO::DidProcessIOEvent()
+    {
+    }
+
 }
