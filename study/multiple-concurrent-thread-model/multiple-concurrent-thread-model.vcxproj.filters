@@ -105,6 +105,9 @@
     <ClInclude Include="net\pipe\pipe.h">
       <Filter>net\pipe</Filter>
     </ClInclude>
+    <ClInclude Include="threading\thread_checker.h">
+      <Filter>threading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -157,6 +160,9 @@
     </ClCompile>
     <ClCompile Include="net\pipe\pipe.cpp">
       <Filter>net\pipe</Filter>
+    </ClCompile>
+    <ClCompile Include="threading\thread_checker.cpp">
+      <Filter>threading</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

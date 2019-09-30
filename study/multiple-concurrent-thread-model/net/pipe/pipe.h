@@ -8,61 +8,62 @@
 
 namespace mctm
 {
+    class ThreadChecker;
+
+    struct AsyncContext
+    {
+        AsyncContext()
+        {
+            memset(&overlapped, 0, sizeof(overlapped));
+        }
+
+        std::atomic_bool is_pending_ = false;
+        MessagePumpForIO::IOContext overlapped;
+        IOBuffer io_buffer;
+    };
+
     class PipeDataTransfer
     {
     public:
         PipeDataTransfer();
         virtual ~PipeDataTransfer();
 
-        bool Send();
-        bool Read();
-        void Close();
+        virtual bool Read();
+        virtual bool Write(const char* data, unsigned int len);
+        virtual void Close();
 
     protected:
-        //HANDLE pipe_handle_ = INVALID_HANDLE_VALUE;
+        HANDLE pipe_handle_ = INVALID_HANDLE_VALUE;
+        AsyncContext read_io_context_;
+        AsyncContext write_io_context_;
     };
 
-    class PipeServer 
-        : PipeDataTransfer
+    class PipeServer
     {
-        enum class AsyncType
-        {
-            Unknown,
-            // PIPE
-            Accept,
-            Read,
-            Write,
-        };
-
-        struct AsyncContext
-        {
-            MessagePumpForIO::IOContext overlapped;
-            IOBuffer io_buffer;
-            std::atomic_bool is_pending_ = true;
-        };
-
-        class ClientInfo : public MessagePumpForIO::IOHandler
+        class ClientInfo 
+            : public PipeDataTransfer
+            , public MessagePumpForIO::IOHandler
         {
         public:
-            ClientInfo(HANDLE pipe_handle, PipeServer* delegate);
+            ClientInfo(HANDLE pipe_handle, PipeServer* pipe_server);
 
             ~ClientInfo();
 
+            bool Accept();
             AsyncType GetAsyncType(MessagePumpForIO::IOContext* context);
+            HANDLE pipe_handle() const { return pipe_handle_; }
 
-        public:
-            HANDLE pipe_handle_ = INVALID_HANDLE_VALUE;
-
-            AsyncContext accept_io_context_;
-            AsyncContext read_io_context_;
-            AsyncContext write_io_context_;
+            // PipeDataTransfer
+            void Close() override;
 
         protected:
+            // IOHandler
             void OnIOCompleted(MessagePumpForIO::IOContext* context, DWORD bytes_transfered,
                 DWORD error) override;
 
         private:
-            PipeServer* delegate_ = nullptr;
+            PipeServer* pipe_server_ = nullptr;
+            AsyncContext accept_io_context_;
         };
         using ScopedClient = std::unique_ptr<ClientInfo>;
 
@@ -72,41 +73,48 @@ namespace mctm
         public:
             virtual ~Delegate() = default;
 
-            virtual void OnClientConnect() = 0;
-            virtual void OnReadData() = 0;
-            virtual void OnSendData() = 0;
-            virtual void OnClientDisconnect() = 0;
+            virtual void OnPipeServerAccept(ULONG_PTR client_key, DWORD error) = 0;
+            virtual void OnPipeServerReadData(ULONG_PTR client_key,
+                DWORD error, const char* data, unsigned int len) = 0;
+            virtual void OnPipeServerWriteData(ULONG_PTR client_key,
+                DWORD error, const char* data, unsigned int len) = 0;
+            virtual void OnPipeServerDisconnect(ULONG_PTR client_key) = 0;
         };
 
         PipeServer(const wchar_t* pipe_name, Delegate* delegate, unsigned int max_pipe_instances_count = 1);
         virtual ~PipeServer();
 
+        // must be called on io thread
         bool Start();
-
-    protected:
+        void Stop();
+        bool Send(ULONG_PTR client_key, const char* data, unsigned int len);
 
     private:
+        void SupplementPipeInstance();
         ScopedClient Create();
-        bool Accept(ClientInfo* client);
+        bool Listen(ClientInfo* client);
         bool Read(ClientInfo* client);
         bool Write(ClientInfo* client, const char* data, unsigned int len);
 
-        virtual void OnClientConnect(ClientInfo* client) = 0;
-        virtual void OnReadData(ClientInfo* client) = 0;
-        virtual void OnSendData(ClientInfo* client) = 0;
-        virtual void OnClientDisconnect(ClientInfo* client) = 0;
+        void OnClientConnect(ClientInfo* client, DWORD error);
+        void OnClientReadData(ClientInfo* client, DWORD error, const char* data, unsigned int len);
+        void OnClientWriteData(ClientInfo* client, DWORD error, const char* data, unsigned int len);
+        void OnClientDisconnect(ClientInfo* client);
 
     private:
         friend class ClientInfo;
 
+        std::unique_ptr<ThreadChecker> thread_check_;
+        Delegate* delegate_ = nullptr;
         std::wstring pipe_name_;
         unsigned int max_pipe_instances_count_ = 1;
         std::list<ScopedClient> clients_;
-        Delegate* delegate_ = nullptr;
+        bool stop_ = true;
     };
 
+
     class PipeClient
-        : PipeDataTransfer
+        : public PipeDataTransfer
         , MessagePumpForIO::IOHandler
     {
     public:
@@ -115,20 +123,33 @@ namespace mctm
         public:
             virtual ~Delegate() = default;
 
-            virtual void OnConnectCompleted() = 0;
+            virtual void OnPipeClientConnect(PipeClient* client_key, DWORD error) = 0;
+            virtual void OnPipeClientReadData(PipeClient* client_key,
+                DWORD error, const char* data, unsigned int len) = 0;
+            virtual void OnPipeClientWriteData(PipeClient* client_key,
+                DWORD error, const char* data, unsigned int len) = 0;
+            virtual void OnPipeClientDisconnect(PipeClient* client_key) = 0;
         };
 
-        PipeClient(const wchar_t* pipe_name);
+        PipeClient(const wchar_t* pipe_name, Delegate* delegate);
         virtual ~PipeClient();
 
+        // must be called on io thread
         bool Connect();
 
+        // PipeDataTransfer
+        void Close() override;
+
     protected:
+        AsyncType GetAsyncType(MessagePumpForIO::IOContext* context);
+
         // IOHandler
         void OnIOCompleted(MessagePumpForIO::IOContext* context, DWORD bytes_transfered,
             DWORD error) override;
 
     private:
+        std::unique_ptr<ThreadChecker> thread_check_;
+        Delegate* delegate_ = nullptr;
         std::wstring pipe_name_;
     };
 }

@@ -99,6 +99,7 @@ namespace mctm
 
         bool RegisterIOHandler(HANDLE file_handle, MessagePumpForIO::IOHandler* handler);
         bool RegisterJobObject(HANDLE job_handle, MessagePumpForIO::IOHandler* handler);
+        bool WaitForIOCompletion(DWORD timeout, MessagePumpForIO::IOHandler* filter);
 
     protected:
         MessagePumpForIO* pump_io();

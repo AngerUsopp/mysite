@@ -505,7 +505,7 @@ namespace mctm
                 return;
             }
 
-            more_work_is_plausible |= WaitForIOCompletion(0);
+            more_work_is_plausible |= WaitForIOCompletion(0, nullptr);
             if (delegate_->ShouldQuitCurrentLoop())
             {
                 return;
@@ -558,10 +558,10 @@ namespace mctm
             timeout = INFINITE;
         }
 
-        WaitForIOCompletion(timeout);
+        WaitForIOCompletion(timeout, nullptr);
     }
 
-    bool MessagePumpForIO::WaitForIOCompletion(DWORD timeout)
+    bool MessagePumpForIO::WaitForIOCompletion(DWORD timeout, IOHandler* filter)
     {
         IOCP::IOItem item;
         if (!iocp_.GetIOItem(timeout, &item))

@@ -49,5 +49,6 @@ namespace mctm
     DEFINE_SMART_POINTER(MessageLoopForUI);
     DEFINE_SMART_POINTER(MessageLoopForIO);
     DEFINE_SMART_POINTER(MessagePump);
+    DEFINE_SMART_POINTER(IOBuffer);
 }
 

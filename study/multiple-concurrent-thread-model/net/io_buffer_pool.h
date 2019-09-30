@@ -4,12 +4,25 @@
 #include <mutex>
 #include <queue>
 
+#include "data_encapsulation/smart_pointer.h"
+
 namespace mctm
 {
     static const int kIOBufferSize = 4096;
 
-    struct IOBuffer
+    enum class AsyncType
     {
+        Unknown,
+
+        // PIPE
+        Pipe_Accept,
+        Pipe_Read,
+        Pipe_Write,
+    };
+
+    class IOBuffer
+    {
+    public:
         IOBuffer()
         {
             Reset();
@@ -23,11 +36,10 @@ namespace mctm
         char buffer[kIOBufferSize];
         int len = kIOBufferSize;
     };
-    using ScopedIOBuffer = std::unique_ptr<IOBuffer>;
 
     class IOBufferPool
     {
-        using BufferQueue = std::queue<ScopedIOBuffer>;
+        using BufferQueue = std::queue<IOBufferRef>;
 
     public:
         IOBufferPool(unsigned int init_count, unsigned int max_count)
@@ -36,19 +48,19 @@ namespace mctm
             init_count = (init_count < max_count) ? init_count : max_count;
             for (unsigned int i = 0; i < init_count; ++i)
             {
-                idle_queue_.push(std::make_unique<IOBuffer>());
+                idle_queue_.push(std::make_shared<IOBuffer>());
             }
         }
 
-        ScopedIOBuffer GetIOBuffer()
+        IOBufferRef GetIOBuffer()
         {
-            ScopedIOBuffer buffer;
+            IOBufferRef buffer;
 
             {
                 std::lock_guard<std::mutex> lock(idle_lock_);
                 if (!idle_queue_.empty())
                 {
-                    buffer = std::move(idle_queue_.front());
+                    buffer = idle_queue_.front();
                     idle_queue_.pop();
                 }
             }
@@ -58,16 +70,17 @@ namespace mctm
                 buffer = std::make_unique<IOBuffer>();
             }
 
-            return std::move(buffer);
+            return buffer;
         }
 
-        void ReleaseIOBuffer(ScopedIOBuffer& buffer)
+        void ReleaseIOBuffer(IOBufferRef buffer)
         {
             {
                 std::lock_guard<std::mutex> lock(outstanding_lock_);
                 if (outstanding_queue_.size() < max_count_)
                 {
-                    outstanding_queue_.push(std::move(buffer));
+                    outstanding_queue_.push(buffer);
+                    return;
                 }
             }
 

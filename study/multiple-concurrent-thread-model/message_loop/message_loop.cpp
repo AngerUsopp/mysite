@@ -295,6 +295,11 @@ namespace mctm
         return pump_io()->RegisterJobObject(job_handle, handler);
     }
 
+    bool MessageLoopForIO::WaitForIOCompletion(DWORD timeout, MessagePumpForIO::IOHandler* filter)
+    {
+        return pump_io()->WaitForIOCompletion(timeout, filter);
+    }
+
     MessagePumpForIO* MessageLoopForIO::pump_io()
     {
         return static_cast<MessagePumpForIO*>(pump_.get());

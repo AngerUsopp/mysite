@@ -2,6 +2,7 @@
 
 #include "logging/logging.h"
 #include "message_loop/message_loop.h"
+#include "threading/thread_checker.h"
 
 namespace
 {
@@ -10,6 +11,88 @@ namespace
 
 namespace mctm
 {
+    // PipeDataTransfer
+    PipeDataTransfer::PipeDataTransfer()
+    {
+    }
+
+    PipeDataTransfer::~PipeDataTransfer()
+    {
+        Close();
+    }
+
+    bool PipeDataTransfer::Read()
+    {
+        if ((INVALID_HANDLE_VALUE != pipe_handle_) &&
+            (!read_io_context_.is_pending_))
+        {
+            read_io_context_.is_pending_ = true;
+
+            BOOL ok = ::ReadFile(pipe_handle_,
+                read_io_context_.io_buffer.buffer,
+                kIOBufferSize,
+                nullptr,
+                &read_io_context_.overlapped);
+            if (!ok)
+            {
+                DWORD err = ::GetLastError();
+                if (err == ERROR_IO_PENDING)
+                {
+                    return true;
+                }
+                DLOG(ERROR) << "pipe read error: " << err;
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    bool PipeDataTransfer::Write(const char* data, unsigned int len)
+    {
+        if (len > kIOBufferSize)
+        {
+            DLOG(ERROR) << "write data out of memory";
+            return false;
+        }
+
+        if ((INVALID_HANDLE_VALUE != pipe_handle_) &&
+            (!write_io_context_.is_pending_))
+        {
+            memcpy(write_io_context_.io_buffer.buffer, data, len);
+            write_io_context_.is_pending_ = true;
+
+            BOOL ok = ::WriteFile(pipe_handle_,
+                write_io_context_.io_buffer.buffer,
+                len,
+                nullptr,
+                &write_io_context_.overlapped);
+            if (!ok)
+            {
+                DWORD err = ::GetLastError();
+                if (err == ERROR_IO_PENDING)
+                {
+                    return true;
+                }
+                DLOG(ERROR) << "pipe write error: " << err;
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void PipeDataTransfer::Close()
+    {
+        if (pipe_handle_ != INVALID_HANDLE_VALUE)
+        {
+            ::CloseHandle(pipe_handle_);
+            pipe_handle_ = INVALID_HANDLE_VALUE;
+        }
+    }
+
+
+    // PipeServer
     PipeServer::PipeServer(const wchar_t* pipe_name, Delegate* delegate,
         unsigned int max_pipe_instances_count/* = 1*/)
         : pipe_name_(pipe_name)
@@ -24,39 +107,91 @@ namespace mctm
 
     bool PipeServer::Start()
     {
-        auto loop = MessageLoopForIO::current();
-        if (!loop)
+        MessageLoopForIORef io_message_loop = MessageLoopForIO::current();
+        if (!io_message_loop)
         {
+            NOTREACHED() << "must be called on exists io thread";
             return false;
         }
 
-        for (auto i = 0; i < max_pipe_instances_count_; ++i)
+        DCHECK(!thread_check_) << "should not called more than once";
+        if (!thread_check_)
+        {
+            thread_check_ = std::make_unique<ThreadChecker>();
+        }
+
+        stop_ = false;
+        for (unsigned int i = 0; i < max_pipe_instances_count_; ++i)
+        {
+            SupplementPipeInstance();
+        }
+
+        DCHECK(!clients_.empty());
+        return !clients_.empty();
+    }
+
+    void PipeServer::Stop()
+    {
+        if (thread_check_)
+        {
+            DCHECK(thread_check_->CalledOnValidThread());
+        }
+
+        stop_ = true;
+        for (auto& iter : clients_)
+        {
+            iter->Close();
+        }
+
+        clients_.clear();
+        thread_check_.reset();
+    }
+
+    bool PipeServer::Send(ULONG_PTR client_key, const char* data, unsigned int len)
+    {
+        if (thread_check_)
+        {
+            DCHECK(thread_check_->CalledOnValidThread());
+        }
+
+        auto iter = std::find_if(clients_.end(), clients_.end(), [&](ScopedClient& client)->bool
+        {
+            return (reinterpret_cast<ULONG_PTR>(client.get()) == client_key);
+        });
+        if (iter != clients_.end())
+        {
+            return (*iter)->Write(data, len);
+        }
+        return false;
+    }
+
+    void PipeServer::SupplementPipeInstance()
+    {
+        if (clients_.size() < max_pipe_instances_count_)
         {
             PipeServer::ScopedClient client = Create();
             if (client)
             {
-                if (loop->RegisterIOHandler(client->pipe_handle_, client.get()))
+                if (MessageLoopForIO::current()->RegisterIOHandler(client->pipe_handle(), client.get()))
                 {
-                    if (Accept(client.get()))
+                    if (Listen(client.get()))
                     {
                         clients_.push_back(std::move(client));
                     }
                 }
             }
         }
-        DCHECK(!clients_.empty());
-        return !clients_.empty();
     }
 
     PipeServer::ScopedClient PipeServer::Create()
     {
         DWORD open_mode = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
-        if(clients_.empty())
+        if (clients_.empty())
         {
             open_mode |= FILE_FLAG_FIRST_PIPE_INSTANCE;
         }
 
-        HANDLE pipe_handle = ::CreateNamedPipe(pipe_name_.c_str(),
+        HANDLE pipe_handle = ::CreateNamedPipeW(pipe_name_.c_str(),
             open_mode,
             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
             max_pipe_instances_count_,
@@ -74,11 +209,113 @@ namespace mctm
         return client;
     }
 
-    bool PipeServer::Accept(ClientInfo* client)
+    bool PipeServer::Listen(ClientInfo* client)
     {
-        if (INVALID_HANDLE_VALUE != client->pipe_handle_)
+        return client->Accept();
+    }
+
+    bool PipeServer::Read(ClientInfo* client)
+    {
+        return client->Read();
+    }
+
+    bool PipeServer::Write(ClientInfo* client, const char* data, unsigned int len)
+    {
+        return client->Write(data, len);
+    }
+
+    void PipeServer::OnClientConnect(ClientInfo* client, DWORD error)
+    {
+        if (delegate_)
         {
-            bool ret = ::ConnectNamedPipe(client->pipe_handle_, &client->accept_io_context_.overlapped);
+            delegate_->OnPipeServerAccept(reinterpret_cast<ULONG_PTR>(client), error);
+        }
+    }
+
+    void PipeServer::OnClientReadData(ClientInfo* client, DWORD error, const char* data, unsigned int len)
+    {
+        if (delegate_)
+        {
+            delegate_->OnPipeServerReadData(reinterpret_cast<ULONG_PTR>(client), error, data, len);
+        }
+    }
+
+    void PipeServer::OnClientWriteData(ClientInfo* client, DWORD error, const char* data, unsigned int len)
+    {
+        if (delegate_)
+        {
+            delegate_->OnPipeServerWriteData(reinterpret_cast<ULONG_PTR>(client), error, data, len);
+        }
+    }
+
+    void PipeServer::OnClientDisconnect(ClientInfo* client)
+    {
+        if (delegate_)
+        {
+            delegate_->OnPipeServerDisconnect(reinterpret_cast<ULONG_PTR>(client));
+        }
+
+        std::remove_if(clients_.end(), clients_.end(), [&](ScopedClient& iter_client)->bool
+        {
+            return (iter_client.get() == client);
+        });
+
+        // 断开了一个实例，就再补充一个继续监听
+        if (!stop_)
+        {
+            SupplementPipeInstance();
+        }
+    }
+
+    // PipeServer::ClientInfo
+    PipeServer::ClientInfo::ClientInfo(HANDLE pipe_handle, PipeServer* pipe_server)
+        : pipe_server_(pipe_server)
+    {
+        pipe_handle_ = pipe_handle;
+    }
+
+    PipeServer::ClientInfo::~ClientInfo()
+    {
+        Close();
+    }
+
+    void PipeServer::ClientInfo::Close()
+    {
+        if (pipe_handle_ != INVALID_HANDLE_VALUE)
+        {
+            if (accept_io_context_.is_pending_ ||
+                read_io_context_.is_pending_ ||
+                write_io_context_.is_pending_)
+            {
+                ::CancelIo(pipe_handle_);
+            }
+
+            ::DisconnectNamedPipe(pipe_handle_);
+
+            ::CloseHandle(pipe_handle_);
+            pipe_handle_ = INVALID_HANDLE_VALUE;
+
+            // 主动循环IOCP，对所有在该pipe上投递的io操作进行处理，
+            // 用以确保与pipe相关的资源都能得到处理，这样才能放心进行资源回收/释放管理
+            DCHECK(MessageLoopForIO::current());
+            while (accept_io_context_.is_pending_ ||
+                read_io_context_.is_pending_ ||
+                write_io_context_.is_pending_)
+            {
+                MessageLoopForIO::current()->WaitForIOCompletion(INFINITE, this);
+            }
+
+            DCHECK(!accept_io_context_.is_pending_ &&
+                !read_io_context_.is_pending_ &&
+                !write_io_context_.is_pending_);
+        }
+    }
+
+    bool PipeServer::ClientInfo::Accept()
+    {
+        if (INVALID_HANDLE_VALUE != pipe_handle_)
+        {
+            bool ret = ::ConnectNamedPipe(pipe_handle_, &accept_io_context_.overlapped);
             if (ret)
             {
                 // Uhm, the API documentation says that this function should never
@@ -91,6 +328,7 @@ namespace mctm
             switch (err)
             {
             case ERROR_IO_PENDING:
+                accept_io_context_.is_pending_ = true;
                 ret = true;
                 break;
             case ERROR_PIPE_CONNECTED:
@@ -111,152 +349,236 @@ namespace mctm
         return false;
     }
 
-    bool PipeServer::Read(ClientInfo* client)
+    AsyncType PipeServer::ClientInfo::GetAsyncType(MessagePumpForIO::IOContext* context)
     {
-        if ((INVALID_HANDLE_VALUE != client->pipe_handle_) && 
-            (!client->accept_io_context_.is_pending_) &&
-            (!client->read_io_context_.is_pending_))
-        {
-            BOOL ok = ::ReadFile(client->pipe_handle_, 
-                client->read_io_context_.io_buffer.buffer, 
-                kIOBufferSize,
-                nullptr, 
-                &client->read_io_context_.overlapped);
-            if (!ok)
-            {
-                DWORD err = ::GetLastError();
-                if (err == ERROR_IO_PENDING)
-                {
-                    return true;
-                }
-                DLOG(ERROR) << "pipe read error: " << err;
-                return false;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    bool PipeServer::Write(ClientInfo* client, const char* data, unsigned int len)
-    {
-        if ((INVALID_HANDLE_VALUE != client->pipe_handle_) &&
-            (!client->accept_io_context_.is_pending_) &&
-            (!client->write_io_context_.is_pending_))
-        {
-            if (len > kMaximumMessageSize)
-            {
-                DLOG(ERROR) << "write data out of memory";
-                return false;
-            }
-
-            // 申请足够内存块存放pending数据
-
-
-            BOOL ok = ::WriteFile(client->pipe_handle_,
-                client->write_io_context_.io_buffer.buffer,
-                len,
-                nullptr,
-                &client->write_io_context_.overlapped);
-            if (!ok)
-            {
-                DWORD err = ::GetLastError();
-                if (err == ERROR_IO_PENDING)
-                {
-                    return true;
-                }
-                DLOG(ERROR) << "pipe write error: " << err;
-                return false;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    // PipeServer::ClientInfo
-    PipeServer::ClientInfo::ClientInfo(HANDLE pipe_handle, PipeServer* delegate)
-        : pipe_handle_(pipe_handle)
-        , delegate_(delegate)
-    {
-    }
-
-    PipeServer::ClientInfo::~ClientInfo()
-    {
-        if (pipe_handle_ != INVALID_HANDLE_VALUE)
-        {
-            ::CloseHandle(pipe_handle_);
-            pipe_handle_ = INVALID_HANDLE_VALUE;
-        }
-    }
-
-    PipeServer::AsyncType PipeServer::ClientInfo::GetAsyncType(MessagePumpForIO::IOContext* context)
-    {
-        PipeServer::AsyncType type = PipeServer::AsyncType::Unknown;
+        AsyncType type = AsyncType::Unknown;
         if (&accept_io_context_.overlapped == context)
         {
-            type = PipeServer::AsyncType::Accept;
+            type = AsyncType::Pipe_Accept;
         }
         else if (&read_io_context_.overlapped == context)
         {
-            type = PipeServer::AsyncType::Read;
+            type = AsyncType::Pipe_Read;
         }
         else if (&write_io_context_.overlapped == context)
         {
-            type = PipeServer::AsyncType::Write;
+            type = AsyncType::Pipe_Write;
         }
         return type;
     }
 
     void PipeServer::ClientInfo::OnIOCompleted(MessagePumpForIO::IOContext* context, DWORD bytes_transfered, DWORD error)
     {
+        DCHECK(pipe_server_->thread_check_->CalledOnValidThread());
+
         auto type = GetAsyncType(context);
         switch (type)
         {
-        case PipeServer::AsyncType::Accept:
+        case AsyncType::Pipe_Accept:
             {
                 accept_io_context_.is_pending_ = false;
 
-                if (error == NOERROR)
+                // 通知有新的连接到来，
+                // delegate应该在这个通知里面抛送Read异步操作，否则无法接收数据
+                if (pipe_server_)
                 {
-                    // 通知有新的连接到来，
-                    // delegate应该在这个通知里面抛送Read异步操作，否则无法接收数据
-                    if (delegate_)
-                    {
-                        delegate_->OnClientConnect(this);
-                    }
+                    pipe_server_->OnClientConnect(this, error);
                 }
             }
             break;
-        case PipeServer::AsyncType::Read:
+        case AsyncType::Pipe_Read:
             {
                 read_io_context_.is_pending_ = false;
 
-                if (error == NOERROR)
+                // 通知数据接收完毕，
+                // delegate应该在这个通知里面继续抛送Read异步操作，否则无法持续接收数据
+                if (pipe_server_)
                 {
-                    // 通知数据接收完毕，
-                    // delegate应该在这个通知里面继续抛送Read异步操作，否则无法持续接收数据
-                    if (delegate_)
-                    {
-                        delegate_->OnReadData(this);
-                    }
+                    pipe_server_->OnClientReadData(this, error, read_io_context_.io_buffer.buffer, bytes_transfered);
                 }
             }
             break;
-        case PipeServer::AsyncType::Write:
+        case AsyncType::Pipe_Write:
+            {
+                write_io_context_.is_pending_ = false;
+
+                if (pipe_server_)
+                {
+                    pipe_server_->OnClientWriteData(this, error, write_io_context_.io_buffer.buffer, bytes_transfered);
+                }
+            }
+            break;
+        default:
+            break;
+        }
+
+        if (error != NOERROR || type == AsyncType::Unknown)
+        {
+            if (pipe_handle_ != INVALID_HANDLE_VALUE)
+            {
+                Close();
+
+                if (pipe_server_)
+                {
+                    pipe_server_->OnClientDisconnect(this);
+                }
+            }
+        }
+    }
+
+
+    // PipeClient
+    PipeClient::PipeClient(const wchar_t* pipe_name, Delegate* delegate)
+    {
+    }
+
+    PipeClient::~PipeClient()
+    {
+        Close();
+    }
+
+    bool PipeClient::Connect()
+    {
+        MessageLoopForIORef io_message_loop = MessageLoopForIO::current();
+        if (!io_message_loop)
+        {
+            NOTREACHED() << "must be called on exists io thread";
+            return false;
+        }
+
+        DCHECK(!thread_check_) << "should not called more than once";
+        if (!thread_check_)
+        {
+            thread_check_ = std::make_unique<ThreadChecker>();
+        }
+
+        pipe_handle_ = ::CreateFileW(pipe_name_.c_str(),
+            GENERIC_READ | GENERIC_WRITE,
+            0,
+            NULL,
+            OPEN_EXISTING,
+            SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION |
+            FILE_FLAG_OVERLAPPED,
+            NULL);
+        if (pipe_handle_ != INVALID_HANDLE_VALUE)
+        {
+            if (io_message_loop->RegisterIOHandler(pipe_handle_, this))
+            {
+                if (Read())
+                {
+                    if (delegate_)
+                    {
+                        delegate_->OnPipeClientConnect(this, NOERROR);
+                    }
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            DWORD err = ::GetLastError();
+            if (delegate_)
+            {
+                delegate_->OnPipeClientConnect(this, err);
+            }
+            /*if (err == ERROR_PIPE_BUSY)
+            {
+                ::WaitNamedPipeW(pipe_name_.c_str(), 5000);
+            }*/
+            DLOG(ERROR) << "PipeClient Create failed, code = " << err;
+        }
+        Close();
+        return false;
+    }
+
+    void PipeClient::Close()
+    {
+        if (thread_check_)
+        {
+            DCHECK(thread_check_->CalledOnValidThread());
+        }
+
+        if (pipe_handle_ != INVALID_HANDLE_VALUE)
+        {
+            if (read_io_context_.is_pending_ ||
+                write_io_context_.is_pending_)
+            {
+                ::CancelIo(pipe_handle_);
+            }
+
+            ::DisconnectNamedPipe(pipe_handle_);
+
+            ::CloseHandle(pipe_handle_);
+            pipe_handle_ = INVALID_HANDLE_VALUE;
+
+            // 主动循环IOCP，对所有在该pipe上投递的io操作进行处理，
+            // 用以确保与pipe相关的资源都能得到处理，这样才能放心进行资源回收/释放管理
+            DCHECK(MessageLoopForIO::current());
+            while (read_io_context_.is_pending_ || write_io_context_.is_pending_)
+            {
+                MessageLoopForIO::current()->WaitForIOCompletion(INFINITE, this);
+            }
+
+            DCHECK(!read_io_context_.is_pending_ && !write_io_context_.is_pending_);
+        }
+    }
+
+    AsyncType PipeClient::GetAsyncType(MessagePumpForIO::IOContext* context)
+    {
+        AsyncType type = AsyncType::Unknown;
+        if (&read_io_context_.overlapped == context)
+        {
+            type = AsyncType::Pipe_Read;
+        }
+        else if (&write_io_context_.overlapped == context)
+        {
+            type = AsyncType::Pipe_Write;
+        }
+        return type;
+    }
+
+    void PipeClient::OnIOCompleted(MessagePumpForIO::IOContext* context, DWORD bytes_transfered, DWORD error)
+    {
+        auto type = GetAsyncType(context);
+        switch (type)
+        {
+        case AsyncType::Pipe_Read:
+            {
+                read_io_context_.is_pending_ = false;
+
+                // 通知数据接收完毕，
+                // delegate应该在这个通知里面继续抛送Read异步操作，否则无法持续接收数据
+                if (delegate_)
+                {
+                    delegate_->OnPipeClientReadData(this, error, read_io_context_.io_buffer.buffer, bytes_transfered);
+                }
+            }
+            break;
+        case AsyncType::Pipe_Write:
             {
                 write_io_context_.is_pending_ = false;
 
                 if (delegate_)
                 {
-                    delegate_->OnSendData(this);
+                    delegate_->OnPipeClientWriteData(this, error, write_io_context_.io_buffer.buffer, bytes_transfered);
                 }
             }
             break;
         default:
-            if (delegate_)
-            {
-                delegate_->OnClientDisconnect(this);
-            }
             break;
+        }
+
+        if (error != NOERROR || type == AsyncType::Unknown)
+        {
+            if (pipe_handle_ != INVALID_HANDLE_VALUE)
+            {
+                Close();
+
+                if (delegate_)
+                {
+                    delegate_->OnPipeClientDisconnect(this);
+                }
+            }
         }
     }
 

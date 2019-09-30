@@ -170,6 +170,7 @@ namespace mctm
 
         bool RegisterIOHandler(HANDLE file_handle, IOHandler* handler);
         bool RegisterJobObject(HANDLE job_handle, IOHandler* handler);
+        bool WaitForIOCompletion(DWORD timeout, IOHandler* filter);
 
     protected:
         // MessagePump
@@ -179,7 +180,6 @@ namespace mctm
 
     private:
         void WaitForWork();
-        bool WaitForIOCompletion(DWORD timeout);
         bool ProcessInternalIOItem(const IOCP::IOItem& item);
         void WillProcessIOEvent();
         void DidProcessIOEvent();
