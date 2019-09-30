@@ -6,6 +6,7 @@
 #include "logging/logging.h"
 #include "message_loop/message_loop.h"
 #include "message_loop/run_loop.h"
+#include "net/pipe/pipe.h"
 #include "threading/thread.h"
 #include "threading/thread_util.h"
 
@@ -35,11 +36,19 @@ void mctm_example()
     option.type = mctm::MessageLoop::Type::TYPE_IO;
     thread.StartWithOptions(option);
 
+    mctm::PipeServer srv(L"\\\\.\\pipe\\chrome", nullptr, 1);
+    mctm::PipeClient cli(L"\\\\.\\pipe\\chrome", nullptr);
+
     while (::_getch() != VK_ESCAPE)
     {
-        thread.message_loop()->PostTask(FROM_HERE, mctm::Bind(GlobalFunction, "mctm_thread post task"));
+        /*thread.message_loop()->PostTask(FROM_HERE, mctm::Bind(GlobalFunction, "mctm_thread post task"));
         thread.message_loop()->PostDelayedTask(FROM_HERE,
             mctm::Bind(GlobalFunction, "mctm_thread post delayed task"),
-            mctm::TimeDelta::FromMilliseconds(2000));
+            mctm::TimeDelta::FromMilliseconds(2000));*/
+
+        thread.message_loop()->PostTask(FROM_HERE, 
+            mctm::Bind(&mctm::PipeServer::Start, &srv));
+        thread.message_loop()->PostTask(FROM_HERE,
+            mctm::Bind(&mctm::PipeClient::Connect, &cli));
     }
 }
