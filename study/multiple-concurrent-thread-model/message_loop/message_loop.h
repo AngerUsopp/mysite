@@ -40,6 +40,7 @@ namespace mctm
     class RunLoop;
     class MessageLoop
         : MessagePump::Delegate
+        , public std::enable_shared_from_this<MessageLoop>
     {
     public:
         enum class Type
@@ -65,6 +66,11 @@ namespace mctm
 
         void PostIdleTask(const Location& from_here,
             const Closure& task);
+
+        void PostTaskAndReply(
+            const Location& from_here,
+            const Closure& task,
+            const Closure& reply);
 
         template <class T>
         void DeleteSoon(const Location& from_here, const T* object)

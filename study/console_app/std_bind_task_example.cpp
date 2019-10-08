@@ -226,8 +226,8 @@ void thread_std_bind_task_study()
 {
     std::shared_ptr<TestBindCls> st = std::make_shared<TestBindCls>();
     std::weak_ptr<TestBindCls> wp(st);
-    /*auto sfn(std::bind(&TestBindCls::Run, st, _1));
-    sfn("asd");*/
+    auto sfn(std::bind(&TestBindCls::Run, st, _1));
+    sfn("asd");
 
     /*auto fn = Bind(&TestBindCls::RunConst, wp, "12312");
     auto ret = fn.Run();

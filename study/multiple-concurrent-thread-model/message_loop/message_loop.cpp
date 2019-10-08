@@ -9,6 +9,57 @@ namespace
 {
     mctm::ThreadSingletonInstance<mctm::ThreadLocalPointer<mctm::MessageLoop>> message_loop_singleton =
         THREAD_SINGLETON_INSTANCE_INITIALIZER(mctm::ThreadLocalPointer<mctm::MessageLoop>);
+
+    class PostTaskAndReplyRelay
+    {
+    public:
+        PostTaskAndReplyRelay(const mctm::Location& from_here,
+            const mctm::Closure& task, const mctm::Closure& reply)
+            : from_here_(from_here),
+            origin_loop_(mctm::MessageLoop::current()->shared_from_this())
+        {
+            task_ = task;
+            reply_ = reply;
+        }
+
+        ~PostTaskAndReplyRelay()
+        {
+            //DCHECK(origin_loop_->BelongsToCurrentThread());
+            task_.Reset();
+            reply_.Reset();
+        }
+
+        void Run()
+        {
+            task_.Run();
+
+            origin_loop_->PostTask(
+                from_here_,
+                mctm::Bind(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct, this));
+        }
+
+    private:
+        void RunReplyAndSelfDestruct()
+        {
+            //DCHECK(origin_loop_->BelongsToCurrentThread());
+
+            // Force |task_| to be released before |reply_| is to ensure that no one
+            // accidentally depends on |task_| keeping one of its arguments alive while
+            // |reply_| is executing.
+            task_.Reset();
+
+            reply_.Run();
+
+            // Cue mission impossible theme.
+            delete this;
+        }
+
+    private:
+        mctm::Location from_here_;
+        mctm::MessageLoopRef origin_loop_;
+        mctm::Closure reply_;
+        mctm::Closure task_;
+    };
 }
 
 namespace mctm
@@ -60,6 +111,13 @@ namespace mctm
     void MessageLoop::PostIdleTask(const Location& from_here, const Closure& task)
     {
         incoming_task_queue_.AddToIncomingQueue(from_here, task, TimeDelta(), false);
+    }
+
+    void MessageLoop::PostTaskAndReply(const Location& from_here, const Closure& task, const Closure& reply)
+    {
+        PostTaskAndReplyRelay* relay =
+            new PostTaskAndReplyRelay(from_here, task, reply);
+        PostTask(from_here, Bind(&PostTaskAndReplyRelay::Run, relay));
     }
 
     void MessageLoop::Quit()

@@ -18,17 +18,16 @@ namespace
         return 111;
     }
 
+    void ReplyGlobalFunction()
+    {
+        std::cout << "ReplyGlobalFunction" << std::endl;
+    }
 }
 
 void mctm_example()
 {
     DLOG(ERROR) << "mctm_example";
-    /*std::unique_ptr<mctm::Thread> thread = mctm::Thread::AttachCurrentThread("main_mctm_thread", mctm::MessageLoop::Type::TYPE_UI);
-    if (thread)
-    {
-        mctm::RunLoop run_loop;
-        run_loop.Run();
-    }*/
+    std::unique_ptr<mctm::Thread> main_thread = mctm::Thread::AttachCurrentThread("main_mctm_thread", mctm::MessageLoop::Type::TYPE_UI);
 
     mctm::Thread thread("mctm_def_thread");
     mctm::Thread::Options option;
@@ -51,6 +50,8 @@ void mctm_example()
                     mctm::Bind(&mctm::PipeServer::Stop, &srv));
                 thread.message_loop()->PostTask(FROM_HERE,
                     mctm::Bind(&mctm::PipeClient::Close, &cli));
+
+                //main_thread->message_loop()->Quit();
             }
             break;
         case 0x31://1
@@ -77,6 +78,13 @@ void mctm_example()
                     mctm::Bind(&mctm::PipeClient::Send, &cli, data, strlen(data)));
             }
             break;
+        case 0x34://4
+            {
+                thread.message_loop()->PostTaskAndReply(FROM_HERE,
+                    mctm::Bind(&GlobalFunction, "PostTaskAndReply"),
+                    mctm::Bind(&ReplyGlobalFunction));
+            }
+            break;
         default:
             {
             }
@@ -84,6 +92,12 @@ void mctm_example()
         }
 
     } while (input_ch != VK_ESCAPE);
+
+    if (main_thread)
+    {
+        mctm::RunLoop run_loop;
+        run_loop.Run();
+    }
 
     thread.Stop();
 }

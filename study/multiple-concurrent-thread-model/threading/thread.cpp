@@ -56,6 +56,7 @@ namespace mctm
         if (thread_.joinable())
         {
             startup_data_.wait_for_run_event.Wait();
+            started_ = true;
         }
 
         return thread_.joinable();
@@ -63,6 +64,11 @@ namespace mctm
     
     void Thread::Stop()
     {
+        if (!started_)
+        {
+            return;
+        }
+
         // 检查一下当前的消息循环是不是嵌套了多层，如果是嵌了多层的那么Thread::Stop是退不出全部嵌套的，只能退当前的；
         // 如果支持强制退出嵌套循环会带来循环依赖的流程错乱一连串的问题，干脆就不支持了，
         // 想要优雅的退出线程正确的做法应该是Stop前发通知，让消息循环按照自己的逻辑处理业务然后自行退出，以此往上层嵌套递归；
@@ -80,6 +86,7 @@ namespace mctm
         }
 
         message_loop_ = nullptr;
+        started_ = false;
     }
 
     void Thread::set_message_loop(MessageLoop* message_loop)

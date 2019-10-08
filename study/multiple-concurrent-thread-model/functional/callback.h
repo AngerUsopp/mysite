@@ -211,6 +211,11 @@ namespace mctm
                 callback_->BaseRun();
             }
         }
+
+        void Reset()
+        {
+            callback_.reset();
+        }
         
         bool Equals(const Closure& other) const
         {

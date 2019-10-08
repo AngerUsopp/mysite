@@ -80,8 +80,9 @@ namespace mctm
     private:
         std::string thread_name_;
         StartupData startup_data_;
+        bool started_ = false;
         std::thread thread_;
-        std::unique_ptr<MessageLoop> message_loop_;
+        MessageLoopRef message_loop_;
     };
 }
 

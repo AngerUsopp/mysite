@@ -161,6 +161,7 @@
     <ClInclude Include="data_encapsulation\smart_pointer.h" />
     <ClInclude Include="functional\callback.h" />
     <ClInclude Include="iocp\iocp.h" />
+    <ClInclude Include="ipc\ipc_channel.h" />
     <ClInclude Include="logging\logging.h" />
     <ClInclude Include="message_loop\incoming_task_queue.h" />
     <ClInclude Include="message_loop\location.h" />
@@ -188,6 +189,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_channel.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="logging\logging.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
