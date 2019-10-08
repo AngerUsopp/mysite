@@ -11,6 +11,7 @@ namespace mctm
     ThreadChecker::ThreadChecker()
         : valid_thread_id_(kInvalidThreadId)
     {
+        EnsureThreadIdAssigned();
     }
 
     ThreadChecker::~ThreadChecker()

@@ -26,6 +26,7 @@ namespace mctm
         if ((INVALID_HANDLE_VALUE != pipe_handle_) &&
             (!read_io_context_.is_pending_))
         {
+            read_io_context_.ResetIOContext();
             read_io_context_.is_pending_ = true;
 
             BOOL ok = ::ReadFile(pipe_handle_,
@@ -59,6 +60,7 @@ namespace mctm
         if ((INVALID_HANDLE_VALUE != pipe_handle_) &&
             (!write_io_context_.is_pending_))
         {
+            write_io_context_.ResetIOContext();
             memcpy(write_io_context_.io_buffer.buffer, data, len);
             write_io_context_.is_pending_ = true;
 
@@ -103,11 +105,12 @@ namespace mctm
 
     PipeServer::~PipeServer()
     {
+        Stop();
     }
 
     bool PipeServer::Start()
     {
-        MessageLoopForIORef io_message_loop = MessageLoopForIO::current();
+        MessageLoopForIO* io_message_loop = MessageLoopForIO::current();
         if (!io_message_loop)
         {
             NOTREACHED() << "must be called on exists io thread";
@@ -154,7 +157,7 @@ namespace mctm
             DCHECK(thread_check_->CalledOnValidThread());
         }
 
-        auto iter = std::find_if(clients_.end(), clients_.end(), [&](ScopedClient& client)->bool
+        auto iter = std::find_if(clients_.begin(), clients_.end(), [&](ScopedClient& client)->bool
         {
             return (reinterpret_cast<ULONG_PTR>(client.get()) == client_key);
         });
@@ -255,7 +258,7 @@ namespace mctm
             delegate_->OnPipeServerDisconnect(reinterpret_cast<ULONG_PTR>(client));
         }
 
-        std::remove_if(clients_.end(), clients_.end(), [&](ScopedClient& iter_client)->bool
+        std::remove_if(clients_.begin(), clients_.end(), [&](ScopedClient& iter_client)->bool
         {
             return (iter_client.get() == client);
         });
@@ -369,8 +372,6 @@ namespace mctm
 
     void PipeServer::ClientInfo::OnIOCompleted(MessagePumpForIO::IOContext* context, DWORD bytes_transfered, DWORD error)
     {
-        DCHECK(pipe_server_->thread_check_->CalledOnValidThread());
-
         auto type = GetAsyncType(context);
         switch (type)
         {
@@ -378,11 +379,16 @@ namespace mctm
             {
                 accept_io_context_.is_pending_ = false;
 
-                // 通知有新的连接到来，
-                // delegate应该在这个通知里面抛送Read异步操作，否则无法接收数据
+                // 通知有新的连接到来
                 if (pipe_server_)
                 {
                     pipe_server_->OnClientConnect(this, error);
+                }
+
+                // 在这个通知里面抛送Read异步操作，否则无法持续自动接收数据
+                if (error == NOERROR)
+                {
+                    Read();
                 }
             }
             break;
@@ -395,6 +401,12 @@ namespace mctm
                 if (pipe_server_)
                 {
                     pipe_server_->OnClientReadData(this, error, read_io_context_.io_buffer.buffer, bytes_transfered);
+                }
+
+                // 在这个通知里面抛送Read异步操作，否则无法持续自动接收数据
+                if (error == NOERROR)
+                {
+                    Read();
                 }
             }
             break;
@@ -429,6 +441,8 @@ namespace mctm
 
     // PipeClient
     PipeClient::PipeClient(const wchar_t* pipe_name, Delegate* delegate)
+        : pipe_name_(pipe_name)
+        , delegate_(delegate)
     {
     }
 
@@ -439,7 +453,7 @@ namespace mctm
 
     bool PipeClient::Connect()
     {
-        MessageLoopForIORef io_message_loop = MessageLoopForIO::current();
+        MessageLoopForIO* io_message_loop = MessageLoopForIO::current();
         if (!io_message_loop)
         {
             NOTREACHED() << "must be called on exists io thread";
@@ -491,6 +505,16 @@ namespace mctm
         return false;
     }
 
+    bool PipeClient::Send(const char* data, unsigned int len)
+    {
+        if (thread_check_)
+        {
+            DCHECK(thread_check_->CalledOnValidThread());
+        }
+
+        return Write(data, len);
+    }
+
     void PipeClient::Close()
     {
         if (thread_check_)
@@ -521,6 +545,8 @@ namespace mctm
 
             DCHECK(!read_io_context_.is_pending_ && !write_io_context_.is_pending_);
         }
+
+        thread_check_.reset();
     }
 
     AsyncType PipeClient::GetAsyncType(MessagePumpForIO::IOContext* context)
@@ -546,11 +572,16 @@ namespace mctm
             {
                 read_io_context_.is_pending_ = false;
 
-                // 通知数据接收完毕，
-                // delegate应该在这个通知里面继续抛送Read异步操作，否则无法持续接收数据
+                // 通知数据接收完毕
                 if (delegate_)
                 {
                     delegate_->OnPipeClientReadData(this, error, read_io_context_.io_buffer.buffer, bytes_transfered);
+                }
+
+                // 在这个通知里面抛送Read异步操作，否则无法持续自动接收数据
+                if (error == NOERROR)
+                {
+                    Read();
                 }
             }
             break;

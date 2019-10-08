@@ -69,10 +69,10 @@ namespace mctm
     }
 
     bool IncomingTaskQueue::AddToIncomingQueue(const Location& from_here, 
-        const Closure& task, TimeDelta delay)
+        const Closure& task, TimeDelta delay, bool nestable)
     {
         bool was_empty = true;
-        PendingTask pending_task(from_here, task, CalculateDelayedRuntime(delay));
+        PendingTask pending_task(from_here, task, CalculateDelayedRuntime(delay), nestable);
         pending_task.sequence_num = g_inc_next_sequence_num++;
         {
             std::lock_guard<std::recursive_mutex> lock(incoming_queue_lock_);

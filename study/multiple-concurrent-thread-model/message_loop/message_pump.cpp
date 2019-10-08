@@ -200,11 +200,6 @@ namespace mctm
     {
         while (true)
         {
-            /*if (delegate_->ShouldQuitCurrentLoop())
-            {
-                return;
-            }*/
-
             bool more_work_is_plausible = ProcessNextWindowsMessage();
             if (delegate_->ShouldQuitCurrentLoop())
             {
@@ -362,7 +357,8 @@ namespace mctm
     {
         if (WM_QUIT == msg.message)
         {
-            delegate_->QuitLoopRecursive();
+            delegate_->QuitCurrentLoopNow();
+            // 再抛一个WM_QUIT消息，以便上层循环递归退出
             ::PostQuitMessage(static_cast<int>(msg.wParam));
             return false;
         }

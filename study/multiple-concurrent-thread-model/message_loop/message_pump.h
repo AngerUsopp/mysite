@@ -27,24 +27,18 @@ namespace mctm
             virtual bool ShouldQuitCurrentLoop() = 0;
 
             //************************************
+            // Method:    QuitCurrentLoop
+            // Remark:    退出当前消息循环
+            //************************************
+            virtual void QuitCurrentLoopNow() = 0;
+
+            //************************************
             // Method:    DoWork、DoDelayedWork、DoIdleWord
             // Returns:   bool，是否还有更多的任务待执行
             //************************************
             virtual bool DoWork() = 0;
             virtual bool DoDelayedWork(TimeTicks* next_delayed_work_time) = 0;
             virtual bool DoIdleWord() = 0;
-
-            //************************************
-            // Method:    QuitCurrentLoop
-            // Returns:   退出当前消息循环
-            //************************************
-            virtual void QuitCurrentLoop() = 0;
-
-            //************************************
-            // Method:    QuitLoopRecursive
-            // Returns:   结束线程，递归退出全部嵌套的消息循环
-            //************************************
-            virtual void QuitLoopRecursive() = 0;
         };
 
         explicit MessagePump(Delegate* delegate);

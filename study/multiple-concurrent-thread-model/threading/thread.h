@@ -53,10 +53,10 @@ namespace mctm
         bool StartWithOptions(const Options& options);
         void Stop();
 
-        MessageLoopRef message_loop() const { return message_loop_; }
+        MessageLoop* message_loop() const { return message_loop_.get(); }
 
     protected:
-        void set_message_loop(MessageLoopRef message_loop);
+        void set_message_loop(MessageLoop* message_loop);
 
         // StdThreadDelegate
         void ThreadMain() override;
@@ -81,7 +81,7 @@ namespace mctm
         std::string thread_name_;
         StartupData startup_data_;
         std::thread thread_;
-        MessageLoopRef message_loop_;
+        std::unique_ptr<MessageLoop> message_loop_;
     };
 }
 

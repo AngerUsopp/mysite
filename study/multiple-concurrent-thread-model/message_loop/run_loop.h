@@ -1,9 +1,8 @@
 #pragma once
 
-#include "data_encapsulation/smart_pointer.h"
-
 namespace mctm
 {
+    class MessageLoop;
     class RunLoop
     {
     public:
@@ -20,11 +19,14 @@ namespace mctm
         void AfterRun();
 
     private:
-        MessageLoopRef message_loop_;
+        friend class MessageLoop;
+
+        MessageLoop* message_loop_;
         RunLoop* previous_run_loop_ = nullptr;
         bool quit_called_ = false;
         bool running_ = false;
         int run_depth_ = 1;
+        bool quit_when_idle_received_ = false;
     };
 }
 

@@ -14,6 +14,11 @@ namespace mctm
     {
         AsyncContext()
         {
+            ResetIOContext();
+        }
+
+        void ResetIOContext()
+        {
             memset(&overlapped, 0, sizeof(overlapped));
         }
 
@@ -46,8 +51,7 @@ namespace mctm
         {
         public:
             ClientInfo(HANDLE pipe_handle, PipeServer* pipe_server);
-
-            ~ClientInfo();
+            virtual ~ClientInfo();
 
             bool Accept();
             AsyncType GetAsyncType(MessagePumpForIO::IOContext* context);
@@ -111,8 +115,7 @@ namespace mctm
         std::list<ScopedClient> clients_;
         bool stop_ = true;
     };
-
-
+    
     class PipeClient
         : public PipeDataTransfer
         , MessagePumpForIO::IOHandler
@@ -136,9 +139,8 @@ namespace mctm
 
         // must be called on io thread
         bool Connect();
-
-        // PipeDataTransfer
-        void Close() override;
+        bool Send(const char* data, unsigned int len);
+        void Close() override; // PipeDataTransfer
 
     protected:
         AsyncType GetAsyncType(MessagePumpForIO::IOContext* context);

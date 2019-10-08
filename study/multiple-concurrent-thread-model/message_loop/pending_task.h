@@ -12,7 +12,8 @@ namespace mctm
         PendingTask();
         PendingTask(const Location& posted_from,
             const Closure& task,
-            TimeTicks delayed_run_time);
+            TimeTicks delayed_run_time,
+            bool nestable);
         ~PendingTask();
 
         // Used to support sorting.
@@ -23,6 +24,8 @@ namespace mctm
         Location posted_from;
         // Secondary sort key for run time.
         int sequence_num = -1;
+        // OK to dispatch from a nested loop.
+        bool nestable = true;
 
         // Time when the related task was posted.
         TimeTicks time_posted;

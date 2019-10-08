@@ -3,12 +3,12 @@
 #include <mutex>
 #include <queue>
 
-#include "data_encapsulation/smart_pointer.h"
 #include "message_loop/pending_task.h"
 #include "time/time_util.h"
 
 namespace mctm
 {
+    class MessageLoop;
     class IncomingTaskQueue
     {
     public:
@@ -17,7 +17,8 @@ namespace mctm
 
         bool AddToIncomingQueue(const Location& from_here,
             const Closure& task,
-            TimeDelta delay);
+            TimeDelta delay,
+            bool nestable);
 
         void ReloadWorkQueue(TaskQueue* work_queue);
 

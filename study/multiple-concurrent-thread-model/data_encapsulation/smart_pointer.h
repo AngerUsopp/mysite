@@ -45,9 +45,6 @@ namespace mctm
         HRESULT result_ = RPC_E_CHANGED_MODE;
     };
 
-    DEFINE_SMART_POINTER(MessageLoop);
-    DEFINE_SMART_POINTER(MessageLoopForUI);
-    DEFINE_SMART_POINTER(MessageLoopForIO);
     DEFINE_SMART_POINTER(MessagePump);
     DEFINE_SMART_POINTER(IOBuffer);
 }

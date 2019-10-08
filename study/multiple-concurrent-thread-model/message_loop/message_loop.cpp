@@ -13,11 +13,11 @@ namespace
 
 namespace mctm
 {
-    MessageLoopRef MessageLoop::current()
+    MessageLoop* MessageLoop::current()
     {
         if (message_loop_singleton.Pointer() && message_loop_singleton.Pointer()->Get())
         {
-            return message_loop_singleton.Pointer()->Get()->shared_from_this();
+            return message_loop_singleton.Pointer()->Get();
         }
         return nullptr;
     }
@@ -54,48 +54,31 @@ namespace mctm
 
     void MessageLoop::PostDelayedTask(const Location& from_here, const Closure& task, TimeDelta delay)
     {
-        incoming_task_queue_.AddToIncomingQueue(from_here, task, delay);
+        incoming_task_queue_.AddToIncomingQueue(from_here, task, delay, true);
     }
 
     void MessageLoop::PostIdleTask(const Location& from_here, const Closure& task)
     {
-
+        incoming_task_queue_.AddToIncomingQueue(from_here, task, TimeDelta(), false);
     }
 
     void MessageLoop::Quit()
     {
-        QuitCurrentLoop();
+        QuitWhenIdle();
     }
 
-    void MessageLoop::QuitThread()
+    bool MessageLoop::IsNested()
     {
-        QuitLoopRecursive();
-
-        if (type_ == Type::TYPE_UI)
+        if (current_run_loop_)
         {
-            // 除调用mctm自身消息循环机制的退出之外还要再调用系统自身消息循环机制的退出，
-            // 防止当前在mctm的循环里如果正嵌套着系统的消息循环（比如正显示着系统的MesssageBox）
-            // 导致mctm的消息循环无法获得判断自身是否需要退出的时机从而导致线程无法优雅退出的问题
-            ::PostQuitMessage(0);
+            return current_run_loop_->run_depth_ > 1;
         }
+        return false;
     }
 
     void MessageLoop::DoRunLoop()
     {
         pump_->DoRunLoop();
-    }
-
-    void MessageLoop::QuitCurrentLoop()
-    {
-        if (current_run_loop_)
-        {
-            current_run_loop_->Quit();
-        }
-    }
-
-    void MessageLoop::QuitLoopRecursive()
-    {
-        thorough_quit_run_loop_ = true;
     }
 
     void MessageLoop::ReloadWorkQueue()
@@ -108,8 +91,14 @@ namespace mctm
 
     bool MessageLoop::DeferOrRunPendingTask(const PendingTask& pending_task)
     {
-        RunTask(pending_task);
-        return true;
+        if (pending_task.nestable || current_run_loop_->run_depth_ == 1)
+        {
+            RunTask(pending_task);
+            return true;
+        }
+
+        deferred_non_nestable_work_queue_.push(pending_task);
+        return false;
     }
 
     void MessageLoop::AddToDelayedWorkQueue(const PendingTask& pending_task)
@@ -130,6 +119,14 @@ namespace mctm
         }
     }
 
+    void MessageLoop::QuitWhenIdle()
+    {
+        if (current_run_loop_)
+        {
+            current_run_loop_->quit_when_idle_received_ = true;
+        }
+    }
+
     void MessageLoop::set_run_loop(RunLoop* run_loop)
     {
         current_run_loop_ = run_loop;
@@ -142,16 +139,19 @@ namespace mctm
 
     bool MessageLoop::ShouldQuitCurrentLoop()
     {
-        if (thorough_quit_run_loop_)
-        {
-            return true;
-        }
-
         if (current_run_loop_)
         {
             return current_run_loop_->quitted();
         }
         return true;
+    }
+
+    void MessageLoop::QuitCurrentLoopNow()
+    {
+        if (current_run_loop_)
+        {
+            current_run_loop_->Quit();
+        }
     }
 
     bool MessageLoop::DoWork()
@@ -238,13 +238,33 @@ namespace mctm
 
     bool MessageLoop::DoIdleWord()
     {
-        if (idle_work_queue_.empty())
+        if (ProcessNextDelayedNonNestableTask())
+        {
+            return true;
+        }
+
+        if (current_run_loop_ && current_run_loop_->quit_when_idle_received_)
+        {
+            current_run_loop_->Quit();
+        }
+
+        return false;
+    }
+
+    bool MessageLoop::ProcessNextDelayedNonNestableTask()
+    {
+        if (current_run_loop_->run_depth_ != 1)
         {
             return false;
         }
 
-        PendingTask pending_task = idle_work_queue_.front();
-        idle_work_queue_.pop();
+        if (deferred_non_nestable_work_queue_.empty())
+        {
+            return false;
+        }
+
+        PendingTask pending_task = deferred_non_nestable_work_queue_.front();
+        deferred_non_nestable_work_queue_.pop();
 
         RunTask(pending_task);
         return true;
@@ -252,14 +272,14 @@ namespace mctm
 
 
     // MessageLoopForUI
-    MessageLoopForUIRef MessageLoopForUI::current()
+    MessageLoopForUI* MessageLoopForUI::current()
     {
-        MessageLoopRef loop = MessageLoop::current();
+        MessageLoop* loop = MessageLoop::current();
         if (loop)
         {
             if (loop->type() == MessageLoop::Type::TYPE_UI)
             {
-                return MessageLoopForUIRef(static_cast<MessageLoopForUI*>(loop.get()));
+                return static_cast<MessageLoopForUI*>(loop);
             }
         }
         return nullptr;
@@ -272,14 +292,14 @@ namespace mctm
 
 
     // MessageLoopForIO
-    MessageLoopForIORef MessageLoopForIO::current()
+    MessageLoopForIO* MessageLoopForIO::current()
     {
-        MessageLoopRef loop = MessageLoop::current();
+        MessageLoop* loop = MessageLoop::current();
         if (loop)
         {
             if (loop->type() == MessageLoop::Type::TYPE_IO)
             {
-                return MessageLoopForIORef(static_cast<MessageLoopForIO*>(loop.get()));
+                return static_cast<MessageLoopForIO*>(loop);
             }
         }
         return nullptr;

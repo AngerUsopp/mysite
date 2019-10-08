@@ -18,7 +18,6 @@ namespace
         return 111;
     }
 
-
 }
 
 void mctm_example()
@@ -39,16 +38,52 @@ void mctm_example()
     mctm::PipeServer srv(L"\\\\.\\pipe\\chrome", nullptr, 1);
     mctm::PipeClient cli(L"\\\\.\\pipe\\chrome", nullptr);
 
-    while (::_getch() != VK_ESCAPE)
+    int input_ch = 0;
+    do 
     {
-        /*thread.message_loop()->PostTask(FROM_HERE, mctm::Bind(GlobalFunction, "mctm_thread post task"));
-        thread.message_loop()->PostDelayedTask(FROM_HERE,
-            mctm::Bind(GlobalFunction, "mctm_thread post delayed task"),
-            mctm::TimeDelta::FromMilliseconds(2000));*/
+        input_ch = ::_getch();
 
-        thread.message_loop()->PostTask(FROM_HERE, 
-            mctm::Bind(&mctm::PipeServer::Start, &srv));
-        thread.message_loop()->PostTask(FROM_HERE,
-            mctm::Bind(&mctm::PipeClient::Connect, &cli));
-    }
+        switch (input_ch)
+        {
+        case VK_ESCAPE:
+            {
+                thread.message_loop()->PostTask(FROM_HERE,
+                    mctm::Bind(&mctm::PipeServer::Stop, &srv));
+                thread.message_loop()->PostTask(FROM_HERE,
+                    mctm::Bind(&mctm::PipeClient::Close, &cli));
+            }
+            break;
+        case 0x31://1
+            {
+                thread.message_loop()->PostTask(FROM_HERE,
+                    mctm::Bind(&mctm::PipeServer::Start, &srv));
+                thread.message_loop()->PostTask(FROM_HERE,
+                    mctm::Bind(&mctm::PipeClient::Connect, &cli));
+            }
+            break;
+        case 0x32://2
+            {
+                static char data[] = "mctm::PipeServer::Send";
+                static ULONG_PTR client_key = 0;
+                thread.message_loop()->PostTask(FROM_HERE,
+                    mctm::Bind(&mctm::PipeServer::Send, &srv, client_key, data, strlen(data)));
+            }
+            break;
+        case 0x33://3
+            {
+                static char data[] = "mctm::PipeClient::Send";
+                ULONG_PTR client_key = 0;
+                thread.message_loop()->PostTask(FROM_HERE,
+                    mctm::Bind(&mctm::PipeClient::Send, &cli, data, strlen(data)));
+            }
+            break;
+        default:
+            {
+            }
+            break;
+        }
+
+    } while (input_ch != VK_ESCAPE);
+
+    thread.Stop();
 }
