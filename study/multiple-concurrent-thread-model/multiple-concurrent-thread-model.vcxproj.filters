@@ -114,6 +114,15 @@
     <ClInclude Include="ipc\ipc_channel.h">
       <Filter>ipc</Filter>
     </ClInclude>
+    <ClInclude Include="ipc\ipc_message.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
+    <ClInclude Include="data_encapsulation\pickle.h">
+      <Filter>data_encapsulation</Filter>
+    </ClInclude>
+    <ClInclude Include="ipc\ipc_listener.h">
+      <Filter>ipc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -171,6 +180,15 @@
       <Filter>threading</Filter>
     </ClCompile>
     <ClCompile Include="ipc\ipc_channel.cpp">
+      <Filter>ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_message.cpp">
+      <Filter>ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="data_encapsulation\pickle.cpp">
+      <Filter>data_encapsulation</Filter>
+    </ClCompile>
+    <ClCompile Include="ipc\ipc_listener.cpp">
       <Filter>ipc</Filter>
     </ClCompile>
   </ItemGroup>

@@ -8,7 +8,7 @@
 
 namespace mctm
 {
-    static const int kIOBufferSize = 4096;
+    static const size_t kIOBufferSize = 4096;
 
     enum class AsyncType
     {

@@ -90,8 +90,8 @@ namespace mctm
 
         // must be called on io thread
         bool Start();
-        void Stop();
         bool Send(ULONG_PTR client_key, const char* data, unsigned int len);
+        void Stop();
 
     private:
         void SupplementPipeInstance();
