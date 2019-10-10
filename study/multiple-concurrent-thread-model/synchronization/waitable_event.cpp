@@ -9,7 +9,7 @@ namespace mctm
 {
     WaitableEvent::WaitableEvent(bool manual, bool initial, const wchar_t* name/* = nullptr*/)
     {
-        event_handle_ = ::CreateEvent(nullptr, manual, initial, name);
+        event_handle_ = ::CreateEventW(nullptr, manual, initial, name);
     }
 
     WaitableEvent::~WaitableEvent()

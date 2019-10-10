@@ -183,12 +183,12 @@ namespace mctm
         swprintf_s(&class_name[0], class_name.size(), kWndClassFormat, this);
 
         HINSTANCE instance = GetModuleFromAddress(&WndProcThunk);
-        WNDCLASSEX wc = { 0 };
+        WNDCLASSEXW wc = { 0 };
         wc.cbSize = sizeof(wc);
         wc.lpfnWndProc = WndProcThunk;
         wc.hInstance = instance;
         wc.lpszClassName = &class_name[0];
-        atom_ = RegisterClassEx(&wc);
+        atom_ = RegisterClassExW(&wc);
         DCHECK(atom_);
 
         message_hwnd_ = CreateWindow(MAKEINTATOM(atom_), 0, 0, 0, 0, 0, 0,
