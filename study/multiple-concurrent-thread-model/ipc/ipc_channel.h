@@ -84,10 +84,10 @@ namespace mctm
         void OnPipeServerDisconnect(ULONG_PTR client_key) override;
 
         // PipeClient::Delegate
-        void OnPipeClientConnect(PipeClient* client_key, DWORD error) override;
-        void OnPipeClientReadData(PipeClient* client_key, DWORD error, const char* data, unsigned int len) override;
-        void OnPipeClientWriteData(PipeClient* client_key, DWORD error, const char* data, unsigned int len) override;
-        void OnPipeClientDisconnect(PipeClient* client_key) override;
+        void OnPipeClientConnect(PipeClient* client, DWORD error) override;
+        void OnPipeClientReadData(PipeClient* client, DWORD error, const char* data, unsigned int len) override;
+        void OnPipeClientWriteData(PipeClient* client, DWORD error, const char* data, unsigned int len) override;
+        void OnPipeClientDisconnect(PipeClient* client) override;
 
     private:
         bool ProcessOutgoingMessages();

@@ -26,6 +26,7 @@ namespace mctm
 
     IPCChannel::~IPCChannel()
     {
+        Close();
     }
 
     bool IPCChannel::Connect()
@@ -70,7 +71,7 @@ namespace mctm
             std::unique_ptr<Message> msg = std::make_unique<Message>(message);
             output_queue_.push(std::move(msg));
 
-            ProcessOutgoingMessages();
+            ret = ProcessOutgoingMessages();
         }
         return ret;
     }
@@ -138,7 +139,7 @@ namespace mctm
     }
 
     // client mode
-    void IPCChannel::OnPipeClientConnect(PipeClient* client_key, DWORD error)
+    void IPCChannel::OnPipeClientConnect(PipeClient* client, DWORD error)
     {
         // send hello msg
         if (error == NOERROR)
@@ -151,7 +152,7 @@ namespace mctm
         }
     }
 
-    void IPCChannel::OnPipeClientReadData(PipeClient* client_key, DWORD error, const char* data, unsigned int len)
+    void IPCChannel::OnPipeClientReadData(PipeClient* client, DWORD error, const char* data, unsigned int len)
     {
         if (error == NOERROR)
         {
@@ -163,7 +164,7 @@ namespace mctm
         }
     }
 
-    void IPCChannel::OnPipeClientWriteData(PipeClient* client_key, DWORD error, const char* data, unsigned int len)
+    void IPCChannel::OnPipeClientWriteData(PipeClient* client, DWORD error, const char* data, unsigned int len)
     {
         if (error == NOERROR)
         {
@@ -175,11 +176,12 @@ namespace mctm
         }
     }
 
-    void IPCChannel::OnPipeClientDisconnect(PipeClient* client_key)
+    void IPCChannel::OnPipeClientDisconnect(PipeClient* client)
     {
         OnChannelClosed();
     }
 
+    // methods
     bool IPCChannel::ProcessOutgoingMessages()
     {
         if (output_queue_.empty())

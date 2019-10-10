@@ -396,8 +396,7 @@ namespace mctm
             {
                 read_io_context_.is_pending_ = false;
 
-                // 通知数据接收完毕，
-                // delegate应该在这个通知里面继续抛送Read异步操作，否则无法持续接收数据
+                // 通知数据接收完毕
                 if (pipe_server_)
                 {
                     pipe_server_->OnClientReadData(this, error, read_io_context_.io_buffer.buffer, bytes_transfered);

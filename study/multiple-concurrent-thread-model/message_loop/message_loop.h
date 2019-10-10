@@ -13,7 +13,7 @@ namespace
     template <class T>
     class DeleteHelper
     {
-    private:
+    public:
         static void DoDelete(const void* object)
         {
             delete reinterpret_cast<const T*>(object);
@@ -25,7 +25,7 @@ namespace
     template <class T>
     class ReleaseHelper
     {
-    private:
+    public:
         static void DoRelease(const void* object)
         {
             reinterpret_cast<const T*>(object)->Release();
