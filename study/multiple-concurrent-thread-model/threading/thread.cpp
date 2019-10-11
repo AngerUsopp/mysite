@@ -33,7 +33,7 @@ namespace mctm
         return nullptr;
     }
 
-    Thread::Thread(const char* thread_name)
+    Thread::Thread(const std::string& thread_name)
         : thread_name_(thread_name)
     {
     }

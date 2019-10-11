@@ -48,5 +48,6 @@ namespace mctm
     DEFINE_SMART_POINTER(MessageLoop);
     DEFINE_SMART_POINTER(MessagePump);
     DEFINE_SMART_POINTER(IOBuffer);
+    using SingleThreadTaskRunner = MessageLoopRef;
 }
 

@@ -49,6 +49,9 @@
     <Filter Include="ipc">
       <UniqueIdentifier>{44aa4b83-ff78-4785-93e3-971f40305698}</UniqueIdentifier>
     </Filter>
+    <Filter Include="net\url_request">
+      <UniqueIdentifier>{821b0d1d-e9d6-40ec-b27c-9d25c5cabc4d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -123,6 +126,18 @@
     <ClInclude Include="ipc\ipc_listener.h">
       <Filter>ipc</Filter>
     </ClInclude>
+    <ClInclude Include="net\url_request\url_request.h">
+      <Filter>net\url_request</Filter>
+    </ClInclude>
+    <ClInclude Include="net\url_request\url_canon.h">
+      <Filter>net\url_request</Filter>
+    </ClInclude>
+    <ClInclude Include="net\url_request\url_request_context.h">
+      <Filter>net\url_request</Filter>
+    </ClInclude>
+    <ClInclude Include="net\url_request\url_fetcher.h">
+      <Filter>net\url_request</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -190,6 +205,18 @@
     </ClCompile>
     <ClCompile Include="ipc\ipc_listener.cpp">
       <Filter>ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="net\url_request\url_request.cpp">
+      <Filter>net\url_request</Filter>
+    </ClCompile>
+    <ClCompile Include="net\url_request\url_canon.cpp">
+      <Filter>net\url_request</Filter>
+    </ClCompile>
+    <ClCompile Include="net\url_request\url_request_context.cpp">
+      <Filter>net\url_request</Filter>
+    </ClCompile>
+    <ClCompile Include="net\url_request\url_fetcher.cpp">
+      <Filter>net\url_request</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

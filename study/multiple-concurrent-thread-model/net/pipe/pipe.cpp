@@ -95,7 +95,7 @@ namespace mctm
 
 
     // PipeServer
-    PipeServer::PipeServer(const wchar_t* pipe_name, Delegate* delegate,
+    PipeServer::PipeServer(const std::wstring& pipe_name, Delegate* delegate,
         unsigned int max_pipe_instances_count/* = 1*/)
         : pipe_name_(pipe_name)
         , delegate_(delegate)
@@ -439,7 +439,7 @@ namespace mctm
 
 
     // PipeClient
-    PipeClient::PipeClient(const wchar_t* pipe_name, Delegate* delegate)
+    PipeClient::PipeClient(const std::wstring& pipe_name, Delegate* delegate)
         : pipe_name_(pipe_name)
         , delegate_(delegate)
     {

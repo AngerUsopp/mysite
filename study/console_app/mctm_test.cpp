@@ -8,6 +8,7 @@
 #include "message_loop/message_loop.h"
 #include "message_loop/run_loop.h"
 #include "net/pipe/pipe.h"
+#include "net/url_request/url_request_context.h"
 #include "threading/thread.h"
 #include "threading/thread_util.h"
 
@@ -168,6 +169,50 @@ namespace
 
         thread.Stop();
     }
+
+    void TestURLRequest()
+    {
+        mctm::Thread::Options option;
+        option.type = mctm::MessageLoop::Type::TYPE_IO;
+        thread.StartWithOptions(option);
+
+        mctm::URLRequestContext url_context;
+        std::unique_ptr<mctm::URLRequest> request;
+
+        int input_ch = 0;
+        do
+        {
+            input_ch = ::_getch();
+
+            switch (input_ch)
+            {
+            case VK_ESCAPE:
+                {
+                }
+                break;
+            case 0x31://1
+                {
+                    request.reset(url_context.CreateURLRequest(mctm::CanonURL("https://api.live.bilibili.com/xlive/app-blink/v1/entrance/GetEntranceList?access_key=99805d73f14624d4f865873fc78d46a1&appkey=aae92bc66f3edfab&platform=pc_link&sign=8097d2cc3dbafaa5f5f686538c80ac28&ts=1570861672&uid=35274621&version=3.10.0.0"), nullptr));
+                    thread.message_loop()->PostTask(FROM_HERE,
+                        mctm::Bind(&mctm::URLRequest::Start, request.get()));
+                }
+                break;
+            case 0x32://2
+                {
+                }
+                break;
+            case 0x33://3
+                {
+                }
+                break;
+            default:
+                break;
+            }
+
+        } while (input_ch != VK_ESCAPE);
+
+        thread.Stop();
+    }
 }
 
 void mctm_example()
@@ -176,7 +221,8 @@ void mctm_example()
     std::unique_ptr<mctm::Thread> main_thread = mctm::Thread::AttachCurrentThread("main_mctm_thread", mctm::MessageLoop::Type::TYPE_UI);
 
     //TestPipe();
-    TestIPC();
+    //TestIPC();
+    TestURLRequest();
 
     /*if (main_thread)
     {

@@ -46,7 +46,7 @@ namespace mctm
 
         static std::unique_ptr<Thread> AttachCurrentThread(const char* thread_name, MessageLoop::Type type);
 
-        explicit Thread(const char* thread_name);
+        explicit Thread(const std::string& thread_name);
         virtual ~Thread();
 
         bool Start();

@@ -85,7 +85,7 @@ namespace mctm
             virtual void OnPipeServerDisconnect(ULONG_PTR client_key) = 0;
         };
 
-        PipeServer(const wchar_t* pipe_name, Delegate* delegate, unsigned int max_pipe_instances_count = 1);
+        PipeServer(const std::wstring& pipe_name, Delegate* delegate, unsigned int max_pipe_instances_count = 1);
         virtual ~PipeServer();
 
         // must be called on io thread
@@ -134,7 +134,7 @@ namespace mctm
             virtual void OnPipeClientDisconnect(PipeClient* client_key) = 0;
         };
 
-        PipeClient(const wchar_t* pipe_name, Delegate* delegate);
+        PipeClient(const std::wstring& pipe_name, Delegate* delegate);
         virtual ~PipeClient();
 
         // must be called on io thread
