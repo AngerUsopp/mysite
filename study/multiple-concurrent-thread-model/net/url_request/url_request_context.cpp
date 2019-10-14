@@ -11,7 +11,8 @@ namespace mctm
     {
     }
 
-    std::unique_ptr<URLRequest> URLRequestContext::CreateURLRequest(const CanonURL& url, URLRequest::Delegate* delegate)
+    std::unique_ptr<URLRequest> URLRequestContext::CreateURLRequest(
+        const CanonURL& url, std::weak_ptr<URLRequest::Delegate> delegate)
     {
         std::unique_ptr<URLRequest> request = std::make_unique<URLRequest>(url, delegate, this);
 

@@ -212,6 +212,15 @@ namespace mctm
         }
     }
 
+    bool MessageLoop::CheckExtensionalLoopSignal()
+    {
+        if (check_extensional_loop_signal_handler_)
+        {
+            return check_extensional_loop_signal_handler_();
+        }
+        return false;
+    }
+
     bool MessageLoop::DoWork()
     {
         // 外面这层无限循环是为了防止如果当前任务队列中全是计时任务的话，

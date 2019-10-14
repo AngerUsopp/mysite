@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 
 #include "url_canon.h"
 
@@ -99,7 +100,7 @@ namespace mctm
     class URLRequest
     {
     public:
-        class Delegate
+        class Delegate : public std::enable_shared_from_this<Delegate>
         {
         public:
             virtual void OnRequestStarted() {}
@@ -113,7 +114,7 @@ namespace mctm
         };
 
         URLRequest(const CanonURL& url,
-            Delegate* delegate,
+            std::weak_ptr<Delegate> delegate,
             const URLRequestContext* context);
         virtual ~URLRequest();
 
@@ -144,7 +145,7 @@ namespace mctm
         friend class URLRequestImpl;
 
         CanonURL url_;
-        Delegate* delegate_ = nullptr;
+        std::weak_ptr<Delegate> delegate_;
         const URLRequestContext* context_ = nullptr;
         std::unique_ptr<URLRequestImpl> request_;
         std::string method_;  // "GET", "POST", etc. Should be all uppercase.

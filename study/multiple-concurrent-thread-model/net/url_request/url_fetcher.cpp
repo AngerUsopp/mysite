@@ -48,22 +48,21 @@ namespace mctm
 
     bool URLFetcher::Start()
     {
-        DCHECK(MessageLoop::current());
-        if (!MessageLoop::current())
-        {
-            return false;
-        }
-
-        delegate_task_runner_ = MessageLoop::current()->shared_from_this();
-
         DCHECK(network_task_runner_);
         if (!network_task_runner_)
         {
             return false;
         }
+
+        DCHECK(MessageLoop::current());
+        if (!MessageLoop::current())
+        {
+            return false;
+        }
         
         started_ = true;
-        network_task_runner_->PostTask(FROM_HERE, Bind(&URLFetcher::StartOnIOThread, weak_from_this()));
+        delegate_task_runner_ = MessageLoop::current()->shared_from_this();
+        network_task_runner_->PostTask(FROM_HERE, Bind(&URLFetcher::StartOnIOThread, GetWeakPtr()));
         return true;
     }
 
@@ -131,7 +130,7 @@ namespace mctm
 
     void URLFetcher::StartOnIOThread()
     {
-        if(!started_)
+        if (!started_)
         {
             return;
         }
@@ -139,7 +138,7 @@ namespace mctm
         DCHECK(request_context_);
         DCHECK(!request_);
 
-        request_ = request_context_->CreateURLRequest(url_, this);
+        request_ = request_context_->CreateURLRequest(url_, weak_from_this());
 
         switch (request_type_)
         {
@@ -171,7 +170,20 @@ namespace mctm
             request_->set_header(HttpRequestHeaders::kContentType, upload_content_type_);
         }
 
-        request_->Start();
+        if (started_)
+        {
+            request_->Start();
+        }
+    }
+
+    std::weak_ptr<URLFetcher> URLFetcher::GetWeakPtr()
+    {
+        return std::weak_ptr<URLFetcher>(std::dynamic_pointer_cast<URLFetcher>(shared_from_this()));
+    }
+
+    void URLFetcher::SetURLFetcherDelegate(URLFetcherDelegate* delegate)
+    {
+        delegate_ = delegate;
     }
 
     // URLRequest::Delegate£¬invoke on io thread
@@ -180,7 +192,7 @@ namespace mctm
         if (delegate_ && delegate_task_runner_)
         {
             delegate_task_runner_->PostTask(FROM_HERE, 
-                Bind(&URLFetcher::InformDelegateRequestStarted, weak_from_this()));
+                Bind(&URLFetcher::InformDelegateRequestStarted, GetWeakPtr()));
         }
     }
 
@@ -189,7 +201,7 @@ namespace mctm
         if (delegate_ && delegate_task_runner_)
         {
             delegate_task_runner_->PostTask(FROM_HERE,
-                Bind(&URLFetcher::InformDelegateRequestFailed, weak_from_this(),
+                Bind(&URLFetcher::InformDelegateRequestFailed, GetWeakPtr(),
                     std::string(err_msg)));
         }
     }
@@ -199,7 +211,7 @@ namespace mctm
         if (delegate_ && delegate_task_runner_)
         {
             delegate_task_runner_->PostTask(FROM_HERE,
-                Bind(&URLFetcher::InformDelegateRequestCompleted, weak_from_this()));
+                Bind(&URLFetcher::InformDelegateRequestCompleted, GetWeakPtr()));
         }
     }
 
@@ -208,7 +220,7 @@ namespace mctm
         if (delegate_ && delegate_task_runner_)
         {
             delegate_task_runner_->PostTask(FROM_HERE,
-                Bind(&URLFetcher::InformDelegateRequestProgress, weak_from_this(),
+                Bind(&URLFetcher::InformDelegateRequestProgress, GetWeakPtr(),
                     dltotal, dlnow, ultotal, ulnow));
         }
     }
@@ -219,7 +231,7 @@ namespace mctm
         {
             std::shared_ptr<std::string> recv_data = std::make_shared<std::string>(ptr, size);
             delegate_task_runner_->PostTask(FROM_HERE, 
-                Bind(&URLFetcher::InformDelegateReponseDataRecv, weak_from_this(),
+                Bind(&URLFetcher::InformDelegateReponseDataRecv, GetWeakPtr(),
                     recv_data));
         }
     }

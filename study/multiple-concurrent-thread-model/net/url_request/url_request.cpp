@@ -334,7 +334,7 @@ namespace
 
 namespace mctm
 {
-    URLRequest::URLRequest(const CanonURL& url, Delegate* delegate, const URLRequestContext* context)
+    URLRequest::URLRequest(const CanonURL& url, std::weak_ptr<Delegate> delegate, const URLRequestContext* context)
         : url_(url)
         , delegate_(delegate)
         , context_(context)
@@ -433,9 +433,10 @@ namespace mctm
     // invoke by URLRequestImpl
     void URLRequest::OnRequestStarted()
     {
-        if (delegate_)
+        auto s_ptr = delegate_.lock();
+        if (s_ptr)
         {
-            delegate_->OnRequestStarted();
+            s_ptr->OnRequestStarted();
         }
     }
 
@@ -445,9 +446,10 @@ namespace mctm
 
         status_.set_status(URLRequestStatus::Status::FAILED);
 
-        if (delegate_)
+        auto s_ptr = delegate_.lock();
+        if (s_ptr)
         {
-            delegate_->OnRequestFailed(err_msg);
+            s_ptr->OnRequestFailed(err_msg);
         }
     }
 
@@ -458,25 +460,28 @@ namespace mctm
 
         status_.set_status(URLRequestStatus::Status::SUCCESS);
 
-        if (delegate_)
+        auto s_ptr = delegate_.lock();
+        if (s_ptr)
         {
-            delegate_->OnRequestCompleted();
+            s_ptr->OnRequestCompleted();
         }
     }
 
     void URLRequest::OnRequestProgress(double dltotal, double dlnow, double ultotal, double ulnow)
     {
-        if (delegate_)
+        auto s_ptr = delegate_.lock();
+        if (s_ptr)
         {
-            delegate_->OnRequestProgress(dltotal, dlnow, ultotal, ulnow);
+            s_ptr->OnRequestProgress(dltotal, dlnow, ultotal, ulnow);
         }
     }
 
     void URLRequest::OnReponseDataRecv(const char *ptr, size_t size)
     {
-        if (delegate_)
+        auto s_ptr = delegate_.lock();
+        if (s_ptr)
         {
-            delegate_->OnReponseDataRecv(ptr, size);
+            s_ptr->OnReponseDataRecv(ptr, size);
         }
     }
 

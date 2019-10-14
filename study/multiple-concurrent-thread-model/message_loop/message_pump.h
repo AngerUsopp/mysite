@@ -33,6 +33,12 @@ namespace mctm
             virtual void QuitCurrentLoopNow() = 0;
 
             //************************************
+            // Method:    CheckExtensionalLoopSignal
+            // Remark:    提供一个时机以便上层触发循环激活信号
+            //************************************
+            virtual bool CheckExtensionalLoopSignal() = 0;
+
+            //************************************
             // Method:    DoWork、DoDelayedWork、DoIdleWord
             // Returns:   bool，是否还有更多的任务待执行
             //************************************

@@ -101,6 +101,12 @@ namespace mctm
                 return;
             }
 
+            more_work_is_plausible |= delegate_->CheckExtensionalLoopSignal();
+            if (delegate_->ShouldQuitCurrentLoop())
+            {
+                return;
+            }
+
             if (more_work_is_plausible)
             {
                 continue;
@@ -232,6 +238,12 @@ namespace mctm
             }
 
             more_work_is_plausible |= delegate_->DoIdleWord();
+            if (delegate_->ShouldQuitCurrentLoop())
+            {
+                return;
+            }
+
+            more_work_is_plausible |= delegate_->CheckExtensionalLoopSignal();
             if (delegate_->ShouldQuitCurrentLoop())
             {
                 return;
@@ -519,6 +531,12 @@ namespace mctm
             }
 
             more_work_is_plausible |= delegate_->DoIdleWord();
+            if (delegate_->ShouldQuitCurrentLoop())
+            {
+                return;
+            }
+
+            more_work_is_plausible |= delegate_->CheckExtensionalLoopSignal();
             if (delegate_->ShouldQuitCurrentLoop())
             {
                 return;

@@ -11,7 +11,7 @@ namespace mctm
         virtual ~URLRequestContext();
 
         std::unique_ptr<URLRequest> CreateURLRequest(const CanonURL& url,
-            URLRequest::Delegate* delegate);
+            std::weak_ptr<URLRequest::Delegate> delegate);
 
     private:
 

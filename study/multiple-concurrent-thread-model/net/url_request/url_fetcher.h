@@ -48,7 +48,6 @@ namespace mctm
     class URLRequest;
     class URLFetcher 
         : public URLRequest::Delegate
-        , public std::enable_shared_from_this<URLFetcher>
     {
         static void Deleter(URLFetcher* fetcher);
     public:
@@ -66,6 +65,8 @@ namespace mctm
         static std::shared_ptr<URLFetcher> Create(const CanonURL& url,
             RequestType request_type,
             URLFetcherDelegate* delegate);
+
+        std::weak_ptr<URLFetcher> GetWeakPtr();
 
         void SetURLFetcherDelegate(URLFetcherDelegate* delegate);
         void SetRequestContext(URLRequestContext* request_context);

@@ -16,7 +16,10 @@ namespace
     public:
         static void DoDelete(const void* object)
         {
-            delete reinterpret_cast<const T*>(object);
+            if (object)
+            {
+                delete reinterpret_cast<const T*>(object);
+            }
         }
 
         //DISALLOW_COPY_AND_ASSIGN(DeleteHelper);
@@ -28,7 +31,10 @@ namespace
     public:
         static void DoRelease(const void* object)
         {
-            reinterpret_cast<const T*>(object)->Release();
+            if (object)
+            {
+                reinterpret_cast<const T*>(object)->Release();
+            }
         }
 
         //DISALLOW_COPY_AND_ASSIGN(ReleaseHelper);
@@ -43,6 +49,8 @@ namespace mctm
         , public std::enable_shared_from_this<MessageLoop>
     {
     public:
+        using CheckExtensionalLoopSignalHandler = std::function<bool()>;
+
         enum class Type
         {
             TYPE_DEFAULT,
@@ -75,12 +83,22 @@ namespace mctm
         template <class T>
         void DeleteSoon(const Location& from_here, const T* object)
         {
+            if (!object)
+            {
+                return;
+            }
+
             PostIdleTask(from_here, Bind(DeleteHelper<T>::DoDelete, object));
         }
 
         template <class T>
         void ReleaseSoon(const Location& from_here, const T* object)
         {
+            if (!object)
+            {
+                return;
+            }
+
             PostIdleTask(from_here, Bind(ReleaseHelper<T>::DoRelease, object));
         }
 
@@ -90,10 +108,17 @@ namespace mctm
         // Returns true if we are currently running a nested message loop.
         bool IsNested();
 
+        void set_check_extensional_loop_signal_handler(
+            CheckExtensionalLoopSignalHandler check_extensional_loop_signal_handler)
+        {
+            check_extensional_loop_signal_handler_ = check_extensional_loop_signal_handler;
+        }
+
     protected:
         // MessagePump::Delegate
         bool ShouldQuitCurrentLoop() override;
         void QuitCurrentLoopNow() override;
+        bool CheckExtensionalLoopSignal() override;
         bool DoWork() override;
         bool DoDelayedWork(TimeTicks* next_delayed_work_time) override;
         bool DoIdleWord() override;
@@ -126,6 +151,7 @@ namespace mctm
         TaskQueue deferred_non_nestable_work_queue_;
         DelayedTaskQueue delayed_work_queue_;
         TimeTicks recent_time_;
+        CheckExtensionalLoopSignalHandler check_extensional_loop_signal_handler_ = nullptr;
     };
 
     class MessageLoopForUI : public MessageLoop

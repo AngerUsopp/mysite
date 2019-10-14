@@ -185,6 +185,7 @@ namespace
                 const char *ptr, size_t size) override
             {
                 data_.append(ptr, size);
+                DLOG(INFO) << data_;
             }
 
         private:
@@ -195,20 +196,27 @@ namespace
         mctm::URLRequestContext url_context;
         std::shared_ptr<mctm::URLFetcher> url_fetcher;
 
-        int input_ch = 0;
-        do
+        auto fn = [&]()->bool
         {
-            input_ch = ::_getch();
+            bool key_pressed = !!::_kbhit();
+            if (!key_pressed)
+            {
+                ::Sleep(1);
+                return true;
+            }
 
+            int input_ch = ::_getch_nolock();
             switch (input_ch)
             {
             case VK_ESCAPE:
                 {
-                    if(url_fetcher)
+                    if (url_fetcher)
                     {
                         url_fetcher->Stop();
                         url_fetcher = nullptr;
                     }
+                    mctm::MessageLoop::current()->set_check_extensional_loop_signal_handler(nullptr);
+                    mctm::MessageLoop::current()->Quit();
                 }
                 break;
             case 0x31://1
@@ -220,19 +228,16 @@ namespace
                     url_fetcher->Start();
                 }
                 break;
-            case 0x32://2
-                {
-                }
-                break;
-            case 0x33://3
-                {
-                }
-                break;
             default:
                 break;
             }
 
-        } while (input_ch != VK_ESCAPE);
+            return true;
+        };
+
+        mctm::MessageLoop::current()->set_check_extensional_loop_signal_handler(fn);
+        mctm::RunLoop run_loop;
+        run_loop.Run();
 
         thread.Stop();
     }
