@@ -11,6 +11,7 @@
 #include "net/url_request/url_request_context.h"
 #include "threading/thread.h"
 #include "threading/thread_util.h"
+#include "net/url_request/url_fetcher.h"
 
 namespace
 {
@@ -176,8 +177,23 @@ namespace
         option.type = mctm::MessageLoop::Type::TYPE_IO;
         thread.StartWithOptions(option);
 
+        class TestFetcher : public mctm::URLFetcherDelegate
+        {
+        public:
+        protected:
+            void OnURLFetchDownloadData(const mctm::URLFetcher* source,
+                const char *ptr, size_t size) override
+            {
+                data_.append(ptr, size);
+            }
+
+        private:
+            std::string data_;
+        };
+        TestFetcher fetcher;
+
         mctm::URLRequestContext url_context;
-        std::unique_ptr<mctm::URLRequest> request;
+        std::shared_ptr<mctm::URLFetcher> url_fetcher;
 
         int input_ch = 0;
         do
@@ -188,13 +204,20 @@ namespace
             {
             case VK_ESCAPE:
                 {
+                    if(url_fetcher)
+                    {
+                        url_fetcher->Stop();
+                        url_fetcher = nullptr;
+                    }
                 }
                 break;
             case 0x31://1
                 {
-                    request.reset(url_context.CreateURLRequest(mctm::CanonURL("https://api.live.bilibili.com/xlive/app-blink/v1/entrance/GetEntranceList?access_key=99805d73f14624d4f865873fc78d46a1&appkey=aae92bc66f3edfab&platform=pc_link&sign=8097d2cc3dbafaa5f5f686538c80ac28&ts=1570861672&uid=35274621&version=3.10.0.0"), nullptr));
-                    thread.message_loop()->PostTask(FROM_HERE,
-                        mctm::Bind(&mctm::URLRequest::Start, request.get()));
+                    url_fetcher = mctm::URLFetcher::Create(mctm::CanonURL("https://api.live.bilibili.com/xlive/app-blink/v1/entrance/GetEntranceList?access_key=99805d73f14624d4f865873fc78d46a1&appkey=aae92bc66f3edfab&platform=pc_link&sign=8097d2cc3dbafaa5f5f686538c80ac28&ts=1570861672&uid=35274621&version=3.10.0.0"),
+                        mctm::URLFetcher::RequestType::GET, &fetcher);
+                    url_fetcher->SetRequestContext(&url_context);
+                    url_fetcher->SetNetworkTaskRunner(thread.message_loop_ref());
+                    url_fetcher->Start();
                 }
                 break;
             case 0x32://2

@@ -54,6 +54,7 @@ namespace mctm
         void Stop();
 
         MessageLoop* message_loop() const { return message_loop_.get(); }
+        MessageLoopRef message_loop_ref() const { return message_loop_; }
 
     protected:
         void set_message_loop(MessageLoop* message_loop);

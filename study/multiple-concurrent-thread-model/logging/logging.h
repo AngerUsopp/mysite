@@ -68,17 +68,6 @@ namespace mctm
 
 #ifndef DCHECK
 
-#define LOG_IS_ON(severity) \
-  ((mctm::LogSeverity::LOG_##severity) >= mctm::GetMinLogLevel())
-
-#if defined(_DEBUG) || defined(DEBUG)
-#define DCHECK_IS_ON() 1
-#define DLOG_IS_ON(severity) LOG_IS_ON(severity)
-#else
-#define DCHECK_IS_ON() 0
-#define DLOG_IS_ON(severity) 0
-#endif
-
 #define COMPACT_MCTM_LOG_INFO_VA(ClassName, ...)\
     mctm::ClassName(__FILE__, __LINE__, mctm::LogSeverity::LOG_INFO, ##__VA_ARGS__)
 #define COMPACT_MCTM_LOG_WARNING_VA(ClassName, ...)\
@@ -99,6 +88,22 @@ namespace mctm
 
 #define LAZY_STREAM(stream, condition) \
     !(condition) ? (void)0 : mctm::LogMessageVoidify() & (stream)
+
+#define LOG_IS_ON(severity) \
+  ((mctm::LogSeverity::LOG_##severity) >= mctm::GetMinLogLevel())
+
+#define LOG(severity) LAZY_STREAM(LOG_STREAM(severity), LOG_IS_ON(severity))
+#define LOG_IF(severity, condition) \
+  LAZY_STREAM(LOG_STREAM(severity), LOG_IS_ON(severity) && (condition))
+
+#if defined(_DEBUG) || defined(DEBUG)
+#define DCHECK_IS_ON() 1
+#define DLOG_IS_ON(severity) LOG_IS_ON(severity)
+#define DLOG_IF(severity, condition) LOG_IF(severity, condition)
+#else
+#define DCHECK_IS_ON() 0
+#define DLOG_IS_ON(severity) 0
+#endif
 
 // check
 #define DCHECK(condition)                                         \

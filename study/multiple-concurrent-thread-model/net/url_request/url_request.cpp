@@ -132,57 +132,53 @@ namespace
             if (curl_ && !do_request_now_)
             {
                 CURLcode ret = CURLE_OK;
+                stop_ = false;
+
+                // callback
+                request_->OnRequestStarted();
 
                 if (header_)
                 {
                     ret = curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, header_);
-                    if (ret != CURLE_OK)
+                }
+
+                if (CURLE_OK == ret)
+                {
+                    do_request_now_ = true;
+                    response_info_.Reset();
+                    ret = curl_easy_perform(curl_);
+                    do_request_now_ = false;
+
+                    if (CURLE_OK == ret)
                     {
-                        return false;
+                        ret = curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, 
+                            &response_info_.response_headers_.response_code_);
                     }
                 }
 
-                do_request_now_ = true;
-                ret = curl_easy_perform(curl_);
-                do_request_now_ = false;
-                if (ret != CURLE_OK)
+                if (CURLE_OK == ret)
+                {
+                    // callback
+                    request_->OnRequestCompleted(&response_info_);
+                }
+                else
                 {
                     const char * err_msg = curl_easy_strerror(ret);
-
                     // callback
                     request_->OnRequestFailed(ret, err_msg);
-
-                    return false;
                 }
 
-                ret = curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE, &response_info_.response_code_);
-                if (ret != CURLE_OK)
-                {
-                    return false;
-                }
-
-                // callback
-                request_->OnRequestCompleted(response_info_.response_code(), &response_info_);
-
-                return true;
+                return (CURLE_OK == ret);
             }
             return false;
         }
 
-        bool GetResponseCode(long* code)
+        void Stop()
         {
-            if (!curl_ || do_request_now_)
+            if (do_request_now_)
             {
-                return false;
+                stop_ = true;
             }
-
-            if (!code)
-            {
-                return false;
-            }
-
-            *code = response_info_.response_code();
-            return true;
         }
 
         bool GetResponseHeaderSize(long* header_size)
@@ -201,37 +197,7 @@ namespace
             return (CURLE_OK == curl_easy_getinfo(curl_, CURLINFO_HEADER_SIZE, header_size));
         }
 
-        bool GetResponseHeader(const std::string** const response_header)
-        {
-            if (!curl_ || do_request_now_)
-            {
-                return false;
-            }
-
-            if (!response_header)
-            {
-                return false;
-            }
-
-            *response_header = &response_info_.response_header();
-            return true;
-        }
-
-        bool GetResponseData(const std::string** const response_data)
-        {
-            if (!curl_ || do_request_now_)
-            {
-                return false;
-            }
-
-            if (!response_data)
-            {
-                return false;
-            }
-
-            *response_data = &response_info_.response_data();
-            return true;
-        }
+        const mctm::HttpResponseInfo* response_info() const { return &response_info_; }
 
     private:
         bool Init()
@@ -241,24 +207,25 @@ namespace
                 curl_ = curl_easy_init();
                 if (curl_)
                 {
-                    //curl_easy_setopt(curl_, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+                    curl_easy_setopt(curl_, CURLOPT_USERAGENT, "libcurl-agent/1.0");
 
                     curl_easy_setopt(curl_, CURLOPT_READFUNCTION, OnRequestSendDataFunction);
-                    curl_easy_setopt(curl_, CURLOPT_READDATA, &request_data_);
+                    curl_easy_setopt(curl_, CURLOPT_READDATA, this);
 
+                    curl_easy_setopt(curl_, CURLOPT_HEADER, 0);
                     curl_easy_setopt(curl_, CURLOPT_HEADERFUNCTION, OnResponseHeaderFunction);
-                    curl_easy_setopt(curl_, CURLOPT_HEADERDATA, &response_header_);
+                    curl_easy_setopt(curl_, CURLOPT_HEADERDATA, this);
 
                     curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, OnResponseRecvDataFunction);
-                    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response_data_);
+                    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, this);
 
                     curl_easy_setopt(curl_, CURLOPT_NOPROGRESS, 0);
 #if LIBCURL_VERSION_NUM >= 0x072000
                     curl_easy_setopt(curl_, CURLOPT_XFERINFOFUNCTION, OnProgressFunction);
-                    curl_easy_setopt(curl_, CURLOPT_XFERINFODATA, 0);
+                    curl_easy_setopt(curl_, CURLOPT_XFERINFODATA, this);
 #else
                     curl_easy_setopt(curl_, CURLOPT_PROGRESSFUNCTION, OnProgressFunction);
-                    curl_easy_setopt(curl_, CURLOPT_PROGRESSDATA, 0);
+                    curl_easy_setopt(curl_, CURLOPT_PROGRESSDATA, this);
 #endif
                 }
 
@@ -284,62 +251,71 @@ namespace
 
             std::tuple<const std::string*, size_t> ept{};
             request_data_.swap(ept);
-            response_header_.clear();
-            response_data_.clear();
-            response_code_ = 0;
+            response_info_.Reset();
         }
 
         // static callback
         static size_t OnRequestSendDataFunction(char *buffer, size_t size, size_t nitems, void *userdata)
         {
-            std::tuple<const std::string*, int>* send_data = 
-                reinterpret_cast<std::tuple<const std::string*, int>*>(userdata);
+            URLRequestImpl* impl = reinterpret_cast<URLRequestImpl*>(userdata);
+
+            if (impl->stop_)
+            {
+                return CURL_READFUNC_ABORT;
+            }
+
             size_t at_most = size * nitems;
-            size_t total = std::min(at_most, std::get<0>(*send_data)->length() - std::get<1>(*send_data));
+            size_t total = std::min(at_most, std::get<0>(impl->request_data_)->length() - std::get<1>(impl->request_data_));
 
-            std::copy_n(std::get<0>(*send_data)->data() + std::get<1>(*send_data), total, buffer);
-            std::get<1>(*send_data) += total;
-
-            // return CURL_READFUNC_ABORT;
+            std::copy_n(std::get<0>(impl->request_data_)->data() + std::get<1>(impl->request_data_), total, buffer);
+            std::get<1>(impl->request_data_) += total;
 
             return total;
         }
 
         static size_t OnResponseHeaderFunction(char *buffer, size_t size, size_t nitems, void *userdata)
         {
-            size_t total = 0;
-            std::string* response_header = reinterpret_cast<std::string*>(userdata);
-            if (response_header)
-            {
-                total = size * nitems;
-                response_header->append(reinterpret_cast<const char*>(buffer), total);
-            }
+            URLRequestImpl* impl = reinterpret_cast<URLRequestImpl*>(userdata);
+
+            size_t total = size * nitems;
+            impl->response_info_.response_headers_.response_header_.append(reinterpret_cast<const char*>(buffer), total);
+
             return total;
         }
 
         static size_t OnResponseRecvDataFunction(char *ptr, size_t size, size_t nmemb, void *userdata)
         {
-            size_t total = 0;
-            std::string* response_data = reinterpret_cast<std::string*>(userdata);
-            if (response_data)
+            URLRequestImpl* impl = reinterpret_cast<URLRequestImpl*>(userdata);
+
+            if (impl->stop_)
             {
-                total = size * nmemb;
-                response_data->append(ptr, total);
+                return 0; //CURL_WRITEFUNC_PAUSE
             }
 
-            //return 0;
+            size_t total = size * nmemb;
+            //impl->response_info_.response_data_.append(ptr, total);
+
+            impl->request_->OnReponseDataRecv((const char*)ptr, total);
 
             return total;
         }
 
         static int OnProgressFunction(void *userdata, double dltotal, double dlnow, double ultotal, double ulnow)
         {
+            URLRequestImpl* impl = reinterpret_cast<URLRequestImpl*>(userdata);
+
+            if (impl->stop_)
+            {
+                return -1;
+            }
+
+            impl->request_->OnRequestProgress(dltotal, dlnow, ultotal, ulnow);
+
             // download: dltotal¡¢dlnow
             // upload: ultotal¡¢ulnow
             //TIMETYPE curtime = 0;
             //curl_easy_getinfo(curl, TIMEOPT, &curtime);
 
-            // return -1;
             return 0;
         }
 
@@ -349,9 +325,10 @@ namespace
         curl_slist* header_ = nullptr;
         std::tuple<const std::string*, size_t> request_data_;
 
-        mctm::URLResponseInfo response_info_;
+        mctm::HttpResponseInfo response_info_;
 
         std::atomic_bool do_request_now_ = false;
+        std::atomic_bool stop_ = false;
     };
 }
 
@@ -372,40 +349,94 @@ namespace mctm
 
     bool URLRequest::Start()
     {
-        if (status_.is_io_pending())
+        if (status_.is_io_pending() || 
+            status_.status() == URLRequestStatus::Status::CANCELED)
         {
             return false;
         }
 
-        if (delegate_)
-        {
-            //////////////////////////////////////////////////////////////////////////
-        }
         status_.set_status(URLRequestStatus::Status::IO_PENDING);
-        if (!request_->DoRequest())
-        {
-            return false;
-        }
-
-        long http_code = -1;
-        if (!request_->GetResponseCode(&http_code))
-        {
-            return false;
-        }
-
-        return true;
+        return request_->DoRequest();
     }
 
     void URLRequest::Cancel()
     {
+        if (status_.is_io_pending())
+        {
+            request_->Stop();
+        }
+
+        status_.set_status(URLRequestStatus::Status::CANCELED);
     }
 
-    void URLRequest::CancelWithError(int error)
+    bool URLRequest::Restart()
     {
+        if (!status_.is_io_pending())
+        {
+            PrepareToRestart();
+            return Start();
+        }
+        return false;
     }
 
-    void URLRequest::Restart()
+    void URLRequest::set_method(const std::string& method)
     {
+        if (!status_.is_io_pending())
+        {
+            method_ = method;
+        }
+    }
+
+    void URLRequest::set_header(const std::map<std::string, std::string>& request_headers)
+    {
+        if (!status_.is_io_pending())
+        {
+            for (auto& iter : request_headers)
+            {
+                set_header(iter.first, iter.second);
+            }
+        }
+    }
+
+    void URLRequest::set_header(const std::string& key, const std::string& value)
+    {
+        if (!status_.is_io_pending())
+        {
+            std::string header_item;
+            header_item.append(key);
+            header_item.append(": ");
+            header_item.append(value);
+            request_->SetHeader(header_item.c_str());
+        }
+    }
+
+    void URLRequest::set_upload(const std::string& upload_data)
+    {
+        if (!status_.is_io_pending())
+        {
+            upload_data_stream_ = upload_data;
+
+            request_->SetData(&upload_data_stream_);
+        }
+    }
+
+    const HttpResponseInfo* URLRequest::response_info() const
+    {
+        return request_->response_info();
+    }
+
+    void URLRequest::PrepareToRestart()
+    {
+        status_.set_status(URLRequestStatus::Status::SUCCESS);
+    }
+
+    // invoke by URLRequestImpl
+    void URLRequest::OnRequestStarted()
+    {
+        if (delegate_)
+        {
+            delegate_->OnRequestStarted();
+        }
     }
 
     void URLRequest::OnRequestFailed(int err_code, const char* err_msg)
@@ -416,19 +447,36 @@ namespace mctm
 
         if (delegate_)
         {
-            //////////////////////////////////////////////////////////////////////////
+            delegate_->OnRequestFailed(err_msg);
         }
     }
 
-    void URLRequest::OnRequestCompleted(int http_status, const URLResponseInfo* rsp_info)
+    void URLRequest::OnRequestCompleted(const HttpResponseInfo* rsp_info)
     {
-        /*DLOG_IF(WARNING, http_status != 200) <<
-            "http request failed, http_status = " << http_status;*/
+        DLOG_IF(WARNING, rsp_info->response_headers()->response_code() != 200) <<
+            "http request failed, http_status = " << rsp_info->response_headers()->response_code();
+
         status_.set_status(URLRequestStatus::Status::SUCCESS);
 
         if (delegate_)
         {
-            //////////////////////////////////////////////////////////////////////////
+            delegate_->OnRequestCompleted();
+        }
+    }
+
+    void URLRequest::OnRequestProgress(double dltotal, double dlnow, double ultotal, double ulnow)
+    {
+        if (delegate_)
+        {
+            delegate_->OnRequestProgress(dltotal, dlnow, ultotal, ulnow);
+        }
+    }
+
+    void URLRequest::OnReponseDataRecv(const char *ptr, size_t size)
+    {
+        if (delegate_)
+        {
+            delegate_->OnReponseDataRecv(ptr, size);
         }
     }
 

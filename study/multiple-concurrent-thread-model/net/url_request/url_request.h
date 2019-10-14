@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "url_canon.h"
 
 namespace
@@ -9,27 +11,39 @@ namespace
 
 namespace mctm
 {
-    class URLResponseInfo
+    class HttpResponseHeaders
     {
     public:
-        long response_code() const
+        long response_code() const { return response_code_; }
+        const std::string& response_header() { return response_header_; }
+
+        void Reset()
         {
-            return response_code_;
+            response_code_ = 0;
+            response_header_.clear();
         }
 
-        const std::string& response_header() { return response_header_; }
-        const std::string& response_data() { return response_data_; }
+    private:
+        friend class URLRequestImpl;
 
         long response_code_ = 0;
         std::string response_header_;
-        std::string response_data_;
     };
 
-    class HttpResponseInfo : public URLResponseInfo
+    class HttpResponseInfo
     {
     public:
-    protected:
+        const HttpResponseHeaders* response_headers() const { return &response_headers_; }
+
+        void Reset()
+        {
+            response_headers_.Reset();
+        }
+
     private:
+        friend class URLRequestImpl;
+
+        HttpResponseHeaders response_headers_;
     };
 
     class URLRequestStatus
@@ -88,8 +102,14 @@ namespace mctm
         class Delegate
         {
         public:
+            virtual void OnRequestStarted() {}
+            virtual void OnRequestFailed(const char* err_msg) {}
+            virtual void OnRequestCompleted() {}
+            virtual void OnRequestProgress(double dltotal, double dlnow, double ultotal, double ulnow) {}
+            virtual void OnReponseDataRecv(const char *ptr, size_t size) = 0;
+
         protected:
-        private:
+            virtual ~Delegate() = default;
         };
 
         URLRequest(const CanonURL& url,
@@ -99,18 +119,26 @@ namespace mctm
 
         bool Start();
         void Cancel();
-        void CancelWithError(int error);
-        void Restart();
+        bool Restart();
 
+        bool is_pending() const { return status_.is_io_pending(); }
         const CanonURL& url() const { return url_; }
         const std::string& method() const { return method_; }
-        void set_method(const std::string& method) { method_ = method; }
+        void set_method(const std::string& method);
+        void set_header(const std::map<std::string, std::string>& request_headers);
+        void set_header(const std::string& key, const std::string& value);
+        void set_upload(const std::string& upload_data);
+
+        const HttpResponseInfo* response_info() const;
 
     private:
+        void PrepareToRestart();
         // invoke by URLRequestImpl
+        void OnRequestStarted();
         void OnRequestFailed(int err_code, const char* err_msg);
-        void OnRequestCompleted(int http_status, const URLResponseInfo* rsp_info);
-        //void OnRequestSucceeded(int err_code, const char* err_msg);
+        void OnRequestCompleted(const HttpResponseInfo* rsp_info);
+        void OnRequestProgress(double dltotal, double dlnow, double ultotal, double ulnow);
+        void OnReponseDataRecv(const char *ptr, size_t size);
 
     private:
         friend class URLRequestImpl;
@@ -120,6 +148,7 @@ namespace mctm
         const URLRequestContext* context_ = nullptr;
         std::unique_ptr<URLRequestImpl> request_;
         std::string method_;  // "GET", "POST", etc. Should be all uppercase.
+        std::string upload_data_stream_;
         URLRequestStatus status_;
     };
 }
