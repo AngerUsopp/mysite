@@ -4,6 +4,8 @@
 #include <processthreadsapi.h>
 #include <time.h>
 
+#include "strings/string_util.h"
+
 #define input_to_string(enum_value) #enum_value
 #define input_to_wstring(enum_value) L#enum_value
 
@@ -55,7 +57,10 @@ namespace mctm
         std::string str_newline(stream_.str());
 
         //////////////////////////////////////////////////////////////////////////
-        ::OutputDebugStringA(str_newline.c_str());
+
+        auto wstr = UTF8ToWide(str_newline);
+        ::OutputDebugStringW(wstr.c_str());
+        wprintf_s(wstr.c_str());
 
         if (severity_ == LOG_FATAL)
         {

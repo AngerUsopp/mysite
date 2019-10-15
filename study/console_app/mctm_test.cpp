@@ -12,6 +12,8 @@
 #include "threading/thread.h"
 #include "threading/thread_util.h"
 #include "net/url_request/url_fetcher.h"
+#include "strings/string_util.h"
+#include "third_party/base/md5.h"
 
 namespace
 {
@@ -185,6 +187,10 @@ namespace
                 const char *ptr, size_t size) override
             {
                 data_.append(ptr, size);
+                std::wstring wstr = mctm::UTF8ToWide(data_);
+                base::MD5Digest hash;
+                base::MD5Sum(ptr, size, &hash);
+                std::string str = base::MD5DigestToBase16(hash);
                 DLOG(INFO) << data_;
             }
 
@@ -205,7 +211,7 @@ namespace
                 return true;
             }
 
-            int input_ch = ::_getch_nolock();
+            int input_ch = ::_getch();
             switch (input_ch)
             {
             case VK_ESCAPE:

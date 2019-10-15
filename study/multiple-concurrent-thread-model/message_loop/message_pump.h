@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <memory>
 #include <windef.h>
 #include <WinUser.h>
@@ -84,6 +85,7 @@ namespace mctm
     protected:
         Delegate* delegate_ = nullptr;
         TimeTicks delayed_work_time_;
+        std::atomic_bool have_work_ = false;
     };
 
     // 以Event为信号点进行循环的泵

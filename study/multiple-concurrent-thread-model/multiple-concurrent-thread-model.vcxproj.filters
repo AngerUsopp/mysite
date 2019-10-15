@@ -52,6 +52,15 @@
     <Filter Include="net\url_request">
       <UniqueIdentifier>{821b0d1d-e9d6-40ec-b27c-9d25c5cabc4d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="third_party">
+      <UniqueIdentifier>{edc5d2aa-f8ca-4509-a9d7-71fb0e642a7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="third_party\base">
+      <UniqueIdentifier>{856fe825-b95f-4e94-a89d-2aee7c593b6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="strings">
+      <UniqueIdentifier>{0c74ffb0-85bc-4eb3-8683-e520cd3d3a09}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -141,6 +150,12 @@
     <ClInclude Include="net\url_request\http_request_headers.h">
       <Filter>net\url_request</Filter>
     </ClInclude>
+    <ClInclude Include="third_party\base\md5.h">
+      <Filter>third_party\base</Filter>
+    </ClInclude>
+    <ClInclude Include="strings\string_util.h">
+      <Filter>strings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -223,6 +238,12 @@
     </ClCompile>
     <ClCompile Include="net\url_request\http_request_headers.cpp">
       <Filter>net\url_request</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\base\md5.cc">
+      <Filter>third_party\base</Filter>
+    </ClCompile>
+    <ClCompile Include="strings\string_util.cpp">
+      <Filter>strings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

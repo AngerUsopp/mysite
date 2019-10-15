@@ -260,8 +260,28 @@ namespace mctm
     
     void MessagePumpForUI::ScheduleWork()
     {
+        if (std::atomic_exchange(&have_work_, true))
+        {
+            return;// Someone else continued the pumping.
+        }
+
         BOOL ret = PostMessage(message_hwnd_, kMsgHaveWork,
             reinterpret_cast<WPARAM>(this), 0);
+        if (ret)
+        {
+            return;  // There was room in the Window Message queue.
+        }
+
+        // We have failed to insert a have-work message, so there is a chance that we
+        // will starve tasks/timers while sitting in a nested message loop.  Nested
+        // loops only look at Windows Message queues, and don't look at *our* task
+        // queues, etc., so we might not get a time slice in such. :-(
+        // We could abort here, but the fear is that this failure mode is plausibly
+        // common (queue is full, of about 2000 messages), so we'll do a near-graceful
+        // recovery.  Nested loops are pretty transient (we think), so this will
+        // probably be recoverable.
+        std::atomic_exchange(&have_work_, false);  // Clarify that we didn't really insert.
+        NOTREACHED() << "msg queue is full";
     }
     
     void MessagePumpForUI::ScheduleDelayedWork(const TimeTicks& delayed_work_time)
@@ -401,6 +421,10 @@ namespace mctm
         bool have_message = false;
         MSG msg = { 0 };
         have_message = !!message_filter_->DoPeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+
+        // Since we discarded a kMsgHaveWork message, we must update the flag.
+        bool old_have_work = std::atomic_exchange(&have_work_, false);
+        DCHECK(old_have_work);
 
         if (!have_message)
         {
@@ -553,10 +577,21 @@ namespace mctm
     
     void MessagePumpForIO::ScheduleWork()
     {
+        if (std::atomic_exchange(&have_work_, true))
+        {
+            return;  // Someone else continued the pumping.
+        }
+
         BOOL ret = ::PostQueuedCompletionStatus(iocp_, 0,
             reinterpret_cast<ULONG_PTR>(this),
             reinterpret_cast<OVERLAPPED*>(this));
-        DCHECK(ret);
+        if (ret)
+        {
+            return;  // Post worked perfectly.
+        }
+
+        // See comment in MessagePumpForUI::ScheduleWork() for this error recovery.
+        std::atomic_exchange(&have_work_, false);  // Clarify that we didn't succeed.
     }
 
     void MessagePumpForIO::ScheduleDelayedWork(const TimeTicks& delayed_work_time)
@@ -603,6 +638,7 @@ namespace mctm
             this == reinterpret_cast<MessagePumpForIO*>(item.overlapped))
         {
             // This is our internal completion.
+            std::atomic_exchange(&have_work_, false);
             return true;
         }
         return false;
