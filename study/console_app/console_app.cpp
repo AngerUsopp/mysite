@@ -91,6 +91,7 @@ void dead_lock_example();
 void ipv6_example();
 void ipc_example();
 void mctm_example();
+void chromium_ipc_example();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -107,7 +108,8 @@ int _tmain(int argc, _TCHAR* argv[])
     //ipv6_example();
     //ipc_example();
     //thread_std_bind_task_study();
-    mctm_example();
+    //mctm_example();
+    chromium_ipc_example();
     system("pause");
 	return 0;
 }

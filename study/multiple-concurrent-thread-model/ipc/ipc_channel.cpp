@@ -6,7 +6,7 @@
 
 namespace mctm
 {
-    IPCChannel::IPCChannel(const wchar_t* pipe_name, Mode mode, IPCListener* listener)
+    IPCChannel::IPCChannel(const std::wstring& pipe_name, Mode mode, IPCListener* listener)
         : pipe_name_(pipe_name)
         , mode_(mode)
         , listener_(listener)
@@ -14,7 +14,7 @@ namespace mctm
         switch (mode)
         {
         case mctm::IPCChannel::MODE_SERVER:
-            pipe_srv_ = std::make_unique<PipeServer>(pipe_name, this);
+            pipe_srv_ = std::make_unique<PipeServer>(pipe_name, this, 1, false);
             break;
         case mctm::IPCChannel::MODE_CLIENT:
             pipe_clt_ = std::make_unique<PipeClient>(pipe_name, this);
@@ -101,10 +101,6 @@ namespace mctm
 
             ProcessOutgoingMessages();
         }
-        else
-        {
-            OnChannelError();
-        }
     }
 
     void IPCChannel::OnPipeServerReadData(ULONG_PTR client_key, DWORD error, const char* data, unsigned int len)
@@ -112,10 +108,6 @@ namespace mctm
         if (error == NOERROR)
         {
             OnChannelReadData(data, len);
-        }
-        else
-        {
-            OnChannelError();
         }
     }
 
@@ -125,17 +117,13 @@ namespace mctm
         {
             ProcessOutgoingMessages();
         }
-        else
-        {
-            OnChannelError();
-        }
     }
 
-    void IPCChannel::OnPipeServerDisconnect(ULONG_PTR client_key)
+    void IPCChannel::OnPipeServerError(ULONG_PTR client_key, DWORD error)
     {
         client_key_ = 0;
 
-        OnChannelClosed();
+        OnChannelError(error);
     }
 
     // client mode
@@ -146,10 +134,6 @@ namespace mctm
         {
             ProcessOutgoingMessages();
         }
-        else
-        {
-            OnChannelError();
-        }
     }
 
     void IPCChannel::OnPipeClientReadData(PipeClient* client, DWORD error, const char* data, unsigned int len)
@@ -157,10 +141,6 @@ namespace mctm
         if (error == NOERROR)
         {
             OnChannelReadData(data, len);
-        }
-        else
-        {
-            OnChannelError();
         }
     }
 
@@ -170,15 +150,11 @@ namespace mctm
         {
             ProcessOutgoingMessages();
         }
-        else
-        {
-            OnChannelError();
-        }
     }
 
-    void IPCChannel::OnPipeClientDisconnect(PipeClient* client)
+    void IPCChannel::OnPipeClientError(PipeClient* client, DWORD error)
     {
-        OnChannelClosed();
+        OnChannelError(error);
     }
 
     // methods
@@ -263,42 +239,41 @@ namespace mctm
         {
             NOTREACHED();
             Close();
-            OnChannelError();
+            OnChannelError(ERROR_READ_FAULT);
             return;
         }
 
         peer_pid_ = claimed_pid;
         // Validation completed.
         //validate_client_ = false;
-
-        if (listener_)
-        {
-            listener_->OnChannelConnected(peer_pid_);
-        }
+        OnChannelConnected();
     }
 
-    void IPCChannel::OnChannelError()
-    {
-        if (listener_)
-        {
-            listener_->OnChannelError();
-        }
-        ClearMessageQueue();
-    }
-
-    void IPCChannel::OnChannelClosed()
-    {
-        if (listener_)
-        {
-            listener_->OnChannelClosed(peer_pid_);
-        }
-        ClearMessageQueue();
-    }
-
-    void IPCChannel::ClearMessageQueue()
+    void IPCChannel::Cleanup()
     {
         MessageQueue empty;
         output_queue_.swap(empty);
+    }
+
+    void IPCChannel::OnChannelConnected()
+    {
+        LOG(INFO) << "ipc channel connected, peer_pid = " << peer_pid_;
+
+        if (listener_)
+        {
+            listener_->OnChannelConnected(this, peer_pid_);
+        }
+    }
+
+    void IPCChannel::OnChannelError(DWORD error)
+    {
+        LOG(INFO) << "ipc channel error, code =" << error << ", peer_pid = " << peer_pid_;
+
+        Cleanup();
+        if (listener_)
+        {
+            listener_->OnChannelError(this);
+        }
     }
 
     void IPCChannel::OnChannelReadData(const char* data, unsigned int len)
@@ -319,7 +294,7 @@ namespace mctm
 
             if (listener_)
             {
-                listener_->OnMessageReceived(*msg);
+                listener_->OnMessageReceived(this, *msg);
             }
         }
 

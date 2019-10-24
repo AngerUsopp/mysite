@@ -96,10 +96,11 @@ namespace mctm
 
     // PipeServer
     PipeServer::PipeServer(const std::wstring& pipe_name, Delegate* delegate,
-        unsigned int max_pipe_instances_count/* = 1*/)
+        unsigned int max_pipe_instances_count/* = 1*/, bool auto_supplement/* = true*/)
         : pipe_name_(pipe_name)
         , delegate_(delegate)
         , max_pipe_instances_count_(max_pipe_instances_count)
+        , auto_supplement_(auto_supplement)
     {
     }
 
@@ -251,22 +252,22 @@ namespace mctm
         }
     }
 
-    void PipeServer::OnClientDisconnect(ClientInfo* client)
+    void PipeServer::OnClientError(ClientInfo* client, DWORD error)
     {
-        if (delegate_)
-        {
-            delegate_->OnPipeServerDisconnect(reinterpret_cast<ULONG_PTR>(client));
-        }
-
-        std::remove_if(clients_.begin(), clients_.end(), [&](ScopedClient& iter_client)->bool
+        clients_.remove_if([&](const ScopedClient& iter_client)->bool
         {
             return (iter_client.get() == client);
         });
 
         // 断开了一个实例，就再补充一个继续监听
-        if (!stop_)
+        if (!stop_ && auto_supplement_)
         {
             SupplementPipeInstance();
+        }
+
+        if (delegate_)
+        {
+            delegate_->OnPipeServerError(reinterpret_cast<ULONG_PTR>(client), error);
         }
     }
 
@@ -431,7 +432,7 @@ namespace mctm
 
                 if (pipe_server_)
                 {
-                    pipe_server_->OnClientDisconnect(this);
+                    pipe_server_->OnClientError(this, error);
                 }
             }
         }
@@ -606,7 +607,7 @@ namespace mctm
 
                 if (delegate_)
                 {
-                    delegate_->OnPipeClientDisconnect(this);
+                    delegate_->OnPipeClientError(this, error);
                 }
             }
         }

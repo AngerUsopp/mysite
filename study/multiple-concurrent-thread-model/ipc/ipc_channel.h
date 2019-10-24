@@ -3,32 +3,11 @@
 #include <limits>
 #include <queue>
 
-#include "ipc_message.h"
+#include "ipc_listener.h"
 #include "net/pipe/pipe.h"
 
 namespace mctm
 {
-    class IPCListener
-    {
-    public:
-        virtual bool OnMessageReceived(const IPCMessage& message) = 0;
-
-        // Called when the channel is connected and we have received the internal
-        // Hello message from the peer.
-        virtual void OnChannelConnected(int peer_pid) {}
-
-        // Called when the channel is connected and we have received the internal
-        // Hello message from the peer.
-        virtual void OnChannelClosed(int peer_pid) {}
-
-        // Called when an error is detected that causes the channel to close.
-        // This method is not called when a channel is closed normally.
-        virtual void OnChannelError() {}
-
-    protected:
-        virtual ~IPCListener() = default;
-    };
-
     class IPCChannel 
         : public PipeServer::Delegate
         , public PipeClient::Delegate
@@ -69,7 +48,7 @@ namespace mctm
             MODE_CLIENT = MODE_CLIENT_FLAG,
         };
 
-        IPCChannel(const wchar_t* pipe_name, Mode mode, IPCListener* listener);
+        IPCChannel(const std::wstring& pipe_name, Mode mode, IPCListener* listener);
         virtual ~IPCChannel();
 
         bool Connect();
@@ -81,22 +60,22 @@ namespace mctm
         void OnPipeServerAccept(ULONG_PTR client_key, DWORD error) override;
         void OnPipeServerReadData(ULONG_PTR client_key, DWORD error, const char* data, unsigned int len) override;
         void OnPipeServerWriteData(ULONG_PTR client_key, DWORD error, const char* data, unsigned int len) override;
-        void OnPipeServerDisconnect(ULONG_PTR client_key) override;
+        void OnPipeServerError(ULONG_PTR client_key, DWORD error) override;
 
         // PipeClient::Delegate
         void OnPipeClientConnect(PipeClient* client, DWORD error) override;
         void OnPipeClientReadData(PipeClient* client, DWORD error, const char* data, unsigned int len) override;
         void OnPipeClientWriteData(PipeClient* client, DWORD error, const char* data, unsigned int len) override;
-        void OnPipeClientDisconnect(PipeClient* client) override;
+        void OnPipeClientError(PipeClient* client, DWORD error) override;
 
     private:
         bool ProcessOutgoingMessages();
         std::unique_ptr<IPCMessage> ProcessIncomingMessages(const char* data, unsigned int len);
         void HandleHelloMessage(const IPCMessage& msg);
-        void ClearMessageQueue();
+        void Cleanup();
+        void OnChannelConnected();
         void OnChannelReadData(const char* data, unsigned int len);
-        void OnChannelError();
-        void OnChannelClosed();
+        void OnChannelError(DWORD error);
 
     private:
         IPCListener* listener_ = nullptr;

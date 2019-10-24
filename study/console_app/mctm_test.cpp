@@ -247,6 +247,81 @@ namespace
 
         thread.Stop();
     }
+
+    void TestChromiumIPC()
+    {
+        enum
+        {
+            IPC_MSG_REQ = 1001,
+            IPC_MSG_RSP = 1002,
+        };
+
+        mctm::Thread::Options option;
+        option.type = mctm::MessageLoop::Type::TYPE_IO;
+        thread.StartWithOptions(option);
+
+        std::unique_ptr<mctm::IPCChannel> srv = std::make_unique<mctm::IPCChannel>
+            (L"\\\\.\\pipe\\chrome.ipc_channel", mctm::IPCChannel::MODE_SERVER, nullptr);
+        std::unique_ptr<mctm::IPCChannel> clt = std::make_unique<mctm::IPCChannel>
+            (L"\\\\.\\pipe\\chrome.ipc_channel", mctm::IPCChannel::MODE_CLIENT, nullptr);
+
+        int input_ch = 0;
+        do
+        {
+            input_ch = ::_getch();
+
+            switch (input_ch)
+            {
+            case VK_ESCAPE:
+                {
+                    thread.message_loop()->PostTask(FROM_HERE,
+                        mctm::Bind(&mctm::IPCChannel::Close, srv.get()));
+                    thread.message_loop()->PostTask(FROM_HERE,
+                        mctm::Bind(&mctm::IPCChannel::Close, clt.get()));
+                    thread.message_loop()->DeleteSoon(FROM_HERE, srv.release());
+                    thread.message_loop()->DeleteSoon(FROM_HERE, clt.release());
+
+                    //main_thread->message_loop()->Quit();
+                }
+                break;
+            case 0x31://1
+                {
+                    thread.message_loop()->PostTask(FROM_HERE,
+                        mctm::Bind(&mctm::IPCChannel::Connect, srv.get()));
+                    thread.message_loop()->PostTask(FROM_HERE,
+                        mctm::Bind(&mctm::IPCChannel::Connect, clt.get()));
+                }
+                break;
+            case 0x32://2
+                {
+                    std::unique_ptr<mctm::IPCMessage> msg = std::make_unique<mctm::IPCMessage>(
+                        mctm::MSG_ROUTING_NONE,
+                        IPC_MSG_REQ,
+                        mctm::IPCMessage::PRIORITY_NORMAL);
+
+                    thread.message_loop()->PostTask(FROM_HERE,
+                        mctm::Bind(&mctm::IPCChannel::Send, srv.get(), msg.release()));
+                }
+                break;
+            case 0x33://3
+                {
+                    std::unique_ptr<mctm::IPCMessage> msg = std::make_unique<mctm::IPCMessage>(
+                        mctm::MSG_ROUTING_NONE,
+                        IPC_MSG_RSP,
+                        mctm::IPCMessage::PRIORITY_NORMAL);
+
+                    thread.message_loop()->PostTask(FROM_HERE,
+                        mctm::Bind(&mctm::IPCChannel::Send, clt.get(), msg.release()));
+                }
+                break;
+            default:
+                break;
+            }
+
+        } while (input_ch != VK_ESCAPE);
+
+        thread.Stop();
+    }
 }
 
 void mctm_example()
@@ -256,7 +331,8 @@ void mctm_example()
 
     //TestPipe();
     //TestIPC();
-    TestURLRequest();
+    //TestURLRequest();
+    TestChromiumIPC();
 
     /*if (main_thread)
     {

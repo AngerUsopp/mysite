@@ -82,10 +82,11 @@ namespace mctm
                 DWORD error, const char* data, unsigned int len) = 0;
             virtual void OnPipeServerWriteData(ULONG_PTR client_key,
                 DWORD error, const char* data, unsigned int len) = 0;
-            virtual void OnPipeServerDisconnect(ULONG_PTR client_key) = 0;
+            virtual void OnPipeServerError(ULONG_PTR client_key, DWORD error) = 0;
         };
 
-        PipeServer(const std::wstring& pipe_name, Delegate* delegate, unsigned int max_pipe_instances_count = 1);
+        PipeServer(const std::wstring& pipe_name, Delegate* delegate, 
+            unsigned int max_pipe_instances_count = 1, bool auto_supplement = true);
         virtual ~PipeServer();
 
         // must be called on io thread
@@ -103,7 +104,7 @@ namespace mctm
         void OnClientConnect(ClientInfo* client, DWORD error);
         void OnClientReadData(ClientInfo* client, DWORD error, const char* data, unsigned int len);
         void OnClientWriteData(ClientInfo* client, DWORD error, const char* data, unsigned int len);
-        void OnClientDisconnect(ClientInfo* client);
+        void OnClientError(ClientInfo* client, DWORD error);
 
     private:
         friend class ClientInfo;
@@ -112,6 +113,7 @@ namespace mctm
         Delegate* delegate_ = nullptr;
         std::wstring pipe_name_;
         unsigned int max_pipe_instances_count_ = 1;
+        bool auto_supplement_ = true;
         std::list<ScopedClient> clients_;
         bool stop_ = true;
     };
@@ -131,7 +133,7 @@ namespace mctm
                 DWORD error, const char* data, unsigned int len) = 0;
             virtual void OnPipeClientWriteData(PipeClient* client_key,
                 DWORD error, const char* data, unsigned int len) = 0;
-            virtual void OnPipeClientDisconnect(PipeClient* client_key) = 0;
+            virtual void OnPipeClientError(PipeClient* client_key, DWORD error) = 0;
         };
 
         PipeClient(const std::wstring& pipe_name, Delegate* delegate);
