@@ -8,6 +8,8 @@
 #include <iostream>
 #include <algorithm>
 #include <conio.h>
+#include <random>
+#include <chrono>
 
 class Pred
 {
@@ -79,6 +81,17 @@ void vector_study()
     }
 }
 
+void shuffle_example()
+{
+    std::vector<std::string> vct{"aa", "bb", "cc", "dd", "ee"};
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::shuffle(vct.begin(), vct.end(), std::default_random_engine(seed));
+    for (auto& iter : vct)
+    {
+        printf("%s, ", iter.c_str());
+    }
+}
+
 void right_ref_study();
 void auto_decltype_study();
 void thread_atomic_study();
@@ -109,7 +122,8 @@ int _tmain(int argc, _TCHAR* argv[])
     //ipc_example();
     //thread_std_bind_task_study();
     //mctm_example();
-    chromium_ipc_example();
+    //chromium_ipc_example();
+    shuffle_example();
     system("pause");
 	return 0;
 }
