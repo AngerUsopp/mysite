@@ -105,6 +105,8 @@ void ipv6_example();
 void ipc_example();
 void mctm_example();
 void chromium_ipc_example();
+void vector_operation_study();
+void try_except_test();
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -123,7 +125,9 @@ int _tmain(int argc, _TCHAR* argv[])
     //thread_std_bind_task_study();
     //mctm_example();
     //chromium_ipc_example();
-    shuffle_example();
+    //shuffle_example();
+    vector_operation_study();
+    //try_except_test();
     system("pause");
 	return 0;
 }

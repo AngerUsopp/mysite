@@ -121,6 +121,7 @@
     </ClCompile>
     <ClCompile Include="thread_message.cpp" />
     <ClCompile Include="variadic_templates_example.cpp" />
+    <ClCompile Include="vector_operation_study.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="console_app.rc" />
